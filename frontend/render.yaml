@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: quizlive-frontend
+    runtime: static
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_IMAGEKIT_PUBLIC_KEY
+        sync: false
+      - key: VITE_IMAGEKIT_URL_ENDPOINT
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
