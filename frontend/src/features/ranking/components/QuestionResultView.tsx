@@ -15,13 +15,13 @@ export function QuestionResultView() {
       {/* Ícone — anéis concêntricos */}
       <div
         className={cn(
-          'flex h-[150px] w-[150px] items-center justify-center rounded-full sm:h-[180px] sm:w-[180px]',
+          'flex h-37.5 w-37.5 items-center justify-center rounded-full sm:h-45 sm:w-45',
           correct ? 'bg-option-d/25' : 'bg-option-a/25',
         )}
       >
         <div
           className={cn(
-            'flex h-[120px] w-[120px] items-center justify-center rounded-full shadow-lg sm:h-[145px] sm:w-[145px]',
+            'flex h-30 w-30 items-center justify-center rounded-full shadow-lg sm:h-36.25 sm:w-36.25',
             correct ? 'bg-option-d' : 'bg-option-a',
           )}
         >

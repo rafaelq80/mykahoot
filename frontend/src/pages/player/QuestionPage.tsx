@@ -1,6 +1,5 @@
 import { useGameStore } from '../../stores/useGameStore';
 import { QuestionView } from '../../features/question-flow/components/QuestionView';
-import { QuestionResultView } from '../../features/ranking/components/QuestionResultView';
 import { ProgressBar } from '../../components/shared/ProgressBar';
 import { useCountdown } from '../../hooks/useCountdown';
 import { AvatarBadge } from '../../components/shared/AvatarBadge';
@@ -17,15 +16,12 @@ export default function QuestionPage() {
   const totalQuestions = useGameStore((s) => s.totalQuestions);
   const currentScore = useGameStore((s) => s.currentScore);
   const currentPosition = useGameStore((s) => s.currentPosition);
-  const questionResult = useGameStore((s) => s.questionResult);
-
-  const showingResult = questionResult !== null;
 
   // Últimos 5s: pisca em vermelho pra chamar atenção que o tempo tá acabando
   const isTimeRunningOut = timer > 0 && timer <= 5;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#200a45] bg-quiz-gradient text-white">
+    <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Top bar: marca + contador de pergunta + timer */}
       <header className="flex items-center justify-between px-4 pt-4 sm:px-6">
         <div className="flex items-center gap-3">
@@ -35,21 +31,14 @@ export default function QuestionPage() {
           </span>
         </div>
 
-        {showingResult ? (
-          <div
-            className="h-9 w-9 rounded-full bg-white/15"
-            aria-hidden="true"
-          />
-        ) : (
-          <div
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 font-extrabold text-quiz-highlight-foreground shadow-sm ${
-              isTimeRunningOut ? 'animate-timer-warning' : 'bg-quiz-highlight'
-            }`}
-          >
-            <ClockIcon />
-            <span>{timer}s</span>
-          </div>
-        )}
+        <div
+          className={`flex items-center gap-2 rounded-full px-4 py-1.5 font-extrabold text-quiz-highlight-foreground shadow-sm ${
+            isTimeRunningOut ? 'animate-timer-warning' : 'bg-quiz-highlight'
+          }`}
+        >
+          <ClockIcon />
+          <span>{timer}s</span>
+        </div>
       </header>
 
       {/* Barra de progresso fina */}
@@ -59,7 +48,7 @@ export default function QuestionPage() {
 
       {/* Conteúdo da pergunta — centralizado */}
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-6">
-        {showingResult ? <QuestionResultView /> : <QuestionView />}
+        <QuestionView />
       </main>
 
       {/* Rodapé: jogador + pontuação */}
