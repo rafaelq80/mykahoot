@@ -11,11 +11,11 @@ export default function ResultPage() {
   const questionNumber = useGameStore((s) => s.questionNumber);
   const totalQuestions = useGameStore((s) => s.totalQuestions);
   const currentScore = useGameStore((s) => s.currentScore);
-  const currentPosition = useGameStore((s) => s.currentPosition);
 
   return (
     <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
-      {/* Top bar — mesmo padrão do QuestionPage, timer trocado por círculo neutro */}
+      {/* Top bar — mesmo padrão do QuestionPage, sem a bolinha de tempo
+          (aqui não há timer ativo, então o indicador foi removido) */}
       <header className="flex items-center justify-between px-4 pt-4 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
@@ -23,8 +23,6 @@ export default function ResultPage() {
             Pergunta {questionNumber}/{totalQuestions}
           </span>
         </div>
-
-        <div className="h-9 w-9 rounded-full bg-white/15" aria-hidden="true" />
       </header>
 
       {/* Barra de progresso fina */}
@@ -32,12 +30,13 @@ export default function ResultPage() {
         <ProgressBar current={questionNumber} total={totalQuestions} />
       </div>
 
-      {/* Conteúdo do resultado — centralizado */}
+      {/* Conteúdo do resultado — acerto ou erro, com os cards de pontuação
+          ganha e posição logo abaixo da mensagem central */}
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-6">
         <QuestionResultView />
       </main>
 
-      {/* Rodapé — mesmo padrão do QuestionPage */}
+      {/* Rodapé — apenas jogador + pontuação TOTAL acumulada (sem ranking) */}
       {playerInfo && (
         <footer className="flex items-center justify-between border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
           <div className="flex flex-col">
@@ -50,23 +49,12 @@ export default function ResultPage() {
             <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">
               Pontuação
             </span>
-            <div className="flex items-center gap-2">
-              {currentPosition != null && (
-                <span className="text-body-md font-bold text-white/90">
-                  {formatOrdinal(currentPosition)} lugar
-                </span>
-              )}
-              <span className="rounded-full bg-quiz-highlight px-3 py-1 font-extrabold text-quiz-highlight-foreground shadow-sm">
-                <ScorePill score={currentScore} />
-              </span>
-            </div>
+            <span className="rounded-full bg-quiz-highlight px-3 py-1 font-extrabold text-quiz-highlight-foreground shadow-sm">
+              <ScorePill score={currentScore} />
+            </span>
           </div>
         </footer>
       )}
     </div>
   );
-}
-
-function formatOrdinal(position: number): string {
-  return `${position}º`;
 }

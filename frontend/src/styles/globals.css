@@ -27,6 +27,12 @@
   --color-quiz-highlight: #ffd60a;
   --color-quiz-highlight-foreground: #2a0b57;
 
+  /* Cards de "Total Score" / "Position" no rodapé (question + result) */
+  --color-quiz-card: #4b2e97;
+  --color-quiz-card-border: rgba(255, 255, 255, 0.08);
+  --color-quiz-card-muted: rgba(216, 200, 245, 0.75);
+  --color-quiz-warn: #f7931e;
+
   --font-family-sans: 'Montserrat', sans-serif;
 
   --radius-DEFAULT: 0.5rem;   /* 8px */

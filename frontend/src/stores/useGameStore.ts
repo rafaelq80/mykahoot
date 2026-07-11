@@ -57,6 +57,14 @@ interface GameState {
   currentScore: number;
   /** Posição atual no ranking (1-based) — mesma lógica acima. */
   currentPosition: number | null;
+  /** Pontos ganhos somente na última rodada resolvida (diferença entre o
+   *  score acumulado novo e o anterior). Usado no card "Total Score" e na
+   *  tela de resultado — o total acumulado continua em `currentScore`. */
+  lastPointsGained: number;
+  /** Variação de posição desde a última rodada: positivo = subiu no
+   *  ranking, negativo = caiu, null = ainda não há posição anterior pra
+   *  comparar (ex: primeira pergunta do jogo). */
+  lastPositionChange: number | null;
 
   // Actions
   setScreen: (screen: GameScreen) => void;
@@ -86,6 +94,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   errorMessage: null,
   currentScore: 0,
   currentPosition: null,
+  lastPointsGained: 0,
+  lastPositionChange: null,
 
   setScreen: (screen) => set({ screen }),
   setPlayerInfo: (info) => set({ playerInfo: info }),
@@ -118,6 +128,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         timer: 0,
         currentScore: 0,
         currentPosition: null,
+        lastPointsGained: 0,
+        lastPositionChange: null,
       });
     }
   },
@@ -142,6 +154,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   handleResultado: (data) => {
+    // Captura os valores ANTES de sobrescrever — é a diferença entre o
+    // score/posição anteriores e os novos que dá os deltas da rodada.
+    const { currentScore: prevScore, currentPosition: prevPosition } = get();
+
     set({
       questionResult: {
         correctIndex: data.correctIndex,
@@ -150,6 +166,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       },
       currentScore: data.you.score,
       currentPosition: data.you.position,
+      lastPointsGained: data.you.score - prevScore,
+      lastPositionChange: prevPosition != null ? prevPosition - data.you.position : null,
       screen: 'question_result',
       timer: 0,
     });
@@ -186,5 +204,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       errorMessage: null,
       currentScore: 0,
       currentPosition: null,
+      lastPointsGained: 0,
+      lastPositionChange: null,
     }),
 }));

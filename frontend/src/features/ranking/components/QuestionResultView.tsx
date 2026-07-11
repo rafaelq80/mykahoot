@@ -1,9 +1,13 @@
 import { useGameStore } from '../../../stores/useGameStore';
 import { cn } from '../../../lib/utils';
+import { PointsGainedCard } from '../../../components/shared/PointsGainedCard';
+import { PositionCard } from '../../../components/shared/PositionCard';
 
 export function QuestionResultView() {
   const questionResult = useGameStore((s) => s.questionResult);
   const question = useGameStore((s) => s.question);
+  const lastPointsGained = useGameStore((s) => s.lastPointsGained);
+  const lastPositionChange = useGameStore((s) => s.lastPositionChange);
 
   if (!questionResult || !question) return null;
 
@@ -32,32 +36,27 @@ export function QuestionResultView() {
       {/* Título + mensagem de incentivo */}
       <div className="flex flex-col gap-1">
         <p className="font-serif font-black text-4xl text-white sm:text-5xl">
-          {correct ? 'CORRECT!' : 'WRONG!'}
+          {correct ? 'ACERTOU!' : 'ERROU!'}
         </p>
         {correct && (
           <p className="font-serif font-bold text-lg text-option-d">
-            You&apos;re on fire!
+            Você está mandando bem!
           </p>
         )}
       </div>
 
-      {/* Cartão de pontos */}
-      <div
-        className={cn(
-          'flex items-baseline gap-1.5 rounded-xl border-2 bg-quiz-surface px-8 py-4',
-          correct ? 'border-option-d' : 'border-option-a',
-        )}
-      >
-        <span className="font-serif font-black text-4xl text-white">
-          {correct ? `+${you.score.toLocaleString()}` : '+0'}
-        </span>
-        <span className="font-serif text-sm text-white/70">pts</span>
+      {/* Retângulos: pontos ganhos nesta rodada + posição no ranking
+          (com medalha pro top 3) — mesmo layout pro acerto e pro erro.
+          O total acumulado NÃO aparece aqui, fica só no rodapé. */}
+      <div className="flex w-full gap-3">
+        <PointsGainedCard pointsGained={correct ? lastPointsGained : 0} correct={correct} />
+        <PositionCard position={you.position} positionChange={lastPositionChange} />
       </div>
 
       {/* Aguardando próxima pergunta */}
       <div className="flex items-center gap-2 text-white/50">
         <SpinnerIcon />
-        <span className="text-sm">Wait for next question...</span>
+        <span className="text-sm">Aguardando próxima pergunta...</span>
       </div>
     </div>
   );
