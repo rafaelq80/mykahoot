@@ -1,84 +1,120 @@
 import { useGameStore } from '../../../stores/useGameStore';
-import { RankingRow } from '../../../components/shared/RankingRow';
 import { cn } from '../../../lib/utils';
-
-const ICONS = ['▲', '◆', '●', '■'] as const;
 
 export function QuestionResultView() {
   const questionResult = useGameStore((s) => s.questionResult);
   const question = useGameStore((s) => s.question);
-  const playerInfo = useGameStore((s) => s.playerInfo);
 
   if (!questionResult || !question) return null;
 
-  const { you, top5, correctIndex } = questionResult;
-  const correctOption = question.options[correctIndex];
-
-  const isSelf = (nickname: string, avatar: string) =>
-    playerInfo?.nickname === nickname && playerInfo?.avatar === avatar;
+  const { you } = questionResult;
+  const correct = you.correct;
 
   return (
-    <div className="flex w-full max-w-md flex-col items-center gap-5 animate-[slideUp_0.4s_ease_both]">
-      {/* Correct / Wrong banner */}
+    <div className="flex w-full max-w-md flex-col items-center gap-6 text-center animate-[slideUp_0.4s_ease_both]">
+      {/* Ícone — anéis concêntricos */}
       <div
         className={cn(
-          'w-full rounded-xl px-5 py-5 text-center shadow-md',
-          you.correct ? 'bg-option-d' : 'bg-option-a',
+          'flex h-[150px] w-[150px] items-center justify-center rounded-full sm:h-[180px] sm:w-[180px]',
+          correct ? 'bg-option-d/25' : 'bg-option-a/25',
         )}
-        role="status"
       >
-        <p className="font-black text-3xl text-white">
-          {you.correct ? '✓ CORRETO!' : '✗ Errou!'}
-        </p>
-        <p className="mt-2 font-bold text-xl text-white/90">
-          {you.correct
-            ? `+${you.score.toLocaleString()} pts`
-            : '+0 pts'}
-        </p>
-      </div>
-
-      {/* Correct answer */}
-      <p className="text-center text-sm text-gray-500">
-        Resposta certa:{' '}
-        <span className="font-bold text-gray-800">
-          {ICONS[correctIndex]} {correctOption}
-        </span>
-      </p>
-
-      {/* Top 5 */}
-      <div className="w-full">
-        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-          Top 5
-        </p>
-        <div className="flex flex-col gap-2">
-          {top5.map((entry, idx) => (
-            <RankingRow
-              key={idx}
-              position={idx + 1}
-              avatar={entry.avatar}
-              nickname={entry.nickname}
-              score={entry.score}
-              isSelf={isSelf(entry.nickname, entry.avatar)}
-              animationDelay={`${idx * 60}ms`}
-            />
-          ))}
-
-          {/* Show self if outside top 5 */}
-          {you.position > 5 && playerInfo && (
-            <RankingRow
-              position={you.position}
-              avatar={playerInfo.avatar}
-              nickname={playerInfo.nickname}
-              score={you.score}
-              isSelf
-            />
+        <div
+          className={cn(
+            'flex h-[120px] w-[120px] items-center justify-center rounded-full shadow-lg sm:h-[145px] sm:w-[145px]',
+            correct ? 'bg-option-d' : 'bg-option-a',
           )}
+        >
+          {correct ? <CheckIcon /> : <CrossIcon />}
         </div>
       </div>
 
-      <p className="text-sm text-gray-400 animate-pulse motion-reduce:animate-none">
-        Aguardando o professor...
-      </p>
+      {/* Título + mensagem de incentivo */}
+      <div className="flex flex-col gap-1">
+        <p className="font-serif font-black text-4xl text-white sm:text-5xl">
+          {correct ? 'CORRECT!' : 'WRONG!'}
+        </p>
+        {correct && (
+          <p className="font-serif font-bold text-lg text-option-d">
+            You&apos;re on fire!
+          </p>
+        )}
+      </div>
+
+      {/* Cartão de pontos */}
+      <div
+        className={cn(
+          'flex items-baseline gap-1.5 rounded-xl border-2 bg-quiz-surface px-8 py-4',
+          correct ? 'border-option-d' : 'border-option-a',
+        )}
+      >
+        <span className="font-serif font-black text-4xl text-white">
+          {correct ? `+${you.score.toLocaleString()}` : '+0'}
+        </span>
+        <span className="font-serif text-sm text-white/70">pts</span>
+      </div>
+
+      {/* Aguardando próxima pergunta */}
+      <div className="flex items-center gap-2 text-white/50">
+        <SpinnerIcon />
+        <span className="text-sm">Wait for next question...</span>
+      </div>
     </div>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-white"
+      aria-hidden="true"
+    >
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+  );
+}
+
+function CrossIcon() {
+  return (
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-white"
+      aria-hidden="true"
+    >
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      className="animate-spin motion-reduce:animate-none"
+      aria-hidden="true"
+    >
+      <path d="M12 3a9 9 0 1 0 9 9" />
+    </svg>
   );
 }
