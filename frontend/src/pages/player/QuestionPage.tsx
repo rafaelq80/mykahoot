@@ -52,28 +52,39 @@ export default function QuestionPage() {
       </main>
 
       {/* Rodapé: jogador + pontuação */}
+      {/* Rodapé: jogador + posição + pontuação */}
       {playerInfo && (
-        <footer className="flex items-center justify-between border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
-          <div className="flex flex-col">
-            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">
+        <footer className="grid grid-cols-3 items-center border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6 w-full">
+          {/* Lado Esquerdo: Jogador */}
+          <div className="flex flex-col items-start">
+            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
               Jogador
             </span>
             <AvatarBadge avatar={playerInfo.avatar} nickname={playerInfo.nickname} />
           </div>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">
-              Pontuação
+
+          {/* Centro: Posição no Ranking */}
+          <div className="flex flex-col items-center text-center">
+            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
+              Posição
             </span>
-            <div className="flex items-center gap-2">
-              {currentPosition != null && (
-                <span className="text-body-md font-bold text-white/90">
-                  {formatOrdinal(currentPosition)} lugar
-                </span>
-              )}
-              <span className="rounded-full bg-quiz-highlight px-3 py-1 font-extrabold text-quiz-highlight-foreground shadow-sm">
-                <ScorePill score={currentScore} />
+            {currentPosition != null ? (
+              <span className="text-title-sm font-black text-white bg-quiz-surface-strong px-4 py-1 rounded-full border border-quiz-border shadow-sm">
+                {formatOrdinal(currentPosition)}
               </span>
-            </div>
+            ) : (
+              <span className="text-body-md font-bold text-white/50">-</span>
+            )}
+          </div>
+
+          {/* Lado Direito: Pontuação Total */}
+          <div className="flex flex-col items-end text-right">
+            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
+              Pontuação Total
+            </span>
+            <span className="rounded-full bg-quiz-highlight px-3 py-1 font-extrabold text-quiz-highlight-foreground shadow-sm">
+              <ScorePill score={currentScore} />
+            </span>
           </div>
         </footer>
       )}
