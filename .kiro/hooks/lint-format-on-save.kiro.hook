@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Lint & Format on Save",
+  "description": "Roda lint/format ao salvar arquivos TypeScript do frontend e do backend, corrigindo automaticamente o que for seguro corrigir.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["frontend/src/**/*.{ts,tsx}", "backend/src/**/*.ts"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Um arquivo TypeScript foi salvo em frontend/src ou backend/src. Rode o linter e o formatador do projeto correspondente sobre esse arquivo (eslint --fix e prettier --write, usando os scripts npm já configurados em package.json, ex.: npm run lint -- --fix) e corrija automaticamente apenas problemas de formatação/estilo. Não altere lógica de negócio. Se o lint apontar um erro que exige decisão humana (não é auto-corrigível), reporte o erro em vez de tentar adivinhar a correção."
+  }
+}

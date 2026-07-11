@@ -3,6 +3,8 @@
 export interface GameEstadoEvent {
   status: string;
   playerCount: number;
+  /** Total de perguntas do quiz selecionado — presente a partir do lobby */
+  totalQuestions?: number;
 }
 
 export interface GamePerguntaEvent {
@@ -11,6 +13,10 @@ export interface GamePerguntaEvent {
   imageUrl: string | null;
   options: string[];
   timeLimitSec: number;
+  /** Posição da pergunta atual, 1-based */
+  order: number;
+  /** Total de perguntas do quiz selecionado */
+  totalQuestions: number;
 }
 
 export interface Top5Entry {

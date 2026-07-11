@@ -7,7 +7,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Post('login')
-  login(@Body() dto: LoginDto): { access_token: string } {
-    return this.adminService.login(dto.password);
+  login(@Body() dto: LoginDto): Promise<{ access_token: string }> {
+    return this.adminService.login(dto.username, dto.password);
   }
 }

@@ -1,90 +1,42 @@
 import { useEffect, useState, useCallback } from 'react';
-import styles from '../styles/AdminPage.module.css';
-import formStyles from '../styles/AdminForms.module.css';
+import { cn } from '../lib/utils';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const IK_PUBLIC_KEY = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ?? '';
 const IK_ENDPOINT = import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT ?? '';
 
-interface Theme {
-  id: string;
-  name: string;
-  description?: string;
-}
+interface Theme { id: string; name: string; description?: string }
+interface Quiz { id: string; title: string; themeId: string; theme: { name: string }; _count: { questions: number } }
+interface Question { id: string; text: string; imageUrl: string | null; options: string[]; correctIndex: number; timeLimitSec: number; order: number }
 
-interface Quiz {
-  id: string;
-  title: string;
-  themeId: string;
-  theme: { name: string };
-  _count: { questions: number };
-}
-
-interface Question {
-  id: string;
-  text: string;
-  imageUrl: string | null;
-  options: string[];
-  correctIndex: number;
-  timeLimitSec: number;
-  order: number;
-}
-
-interface Props {
-  token: string;
-}
-
-// ── ImageKit upload helper ──────────────────────────────────────────────────
-async function uploadToImageKit(
-  file: File,
-  token: string,
-): Promise<string | null> {
+async function uploadToImageKit(file: File, token: string): Promise<string | null> {
   try {
-    const authRes = await fetch(`${API_URL}/imagekit/auth`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const authRes = await fetch(`${API_URL}/imagekit/auth`, { headers: { Authorization: `Bearer ${token}` } });
     if (!authRes.ok) return null;
-    const auth = (await authRes.json()) as {
-      token: string;
-      expire: number;
-      signature: string;
-    };
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('fileName', file.name);
-    formData.append('publicKey', IK_PUBLIC_KEY);
-    formData.append('signature', auth.signature);
-    formData.append('expire', String(auth.expire));
-    formData.append('token', auth.token);
-    const uploadRes = await fetch(`${IK_ENDPOINT}/api/v1/files/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-    if (!uploadRes.ok) return null;
-    const result = (await uploadRes.json()) as { url: string };
-    return result.url;
-  } catch {
-    return null;
-  }
+    const auth = (await authRes.json()) as { token: string; expire: number; signature: string };
+    const fd = new FormData();
+    fd.append('file', file); fd.append('fileName', file.name);
+    fd.append('publicKey', IK_PUBLIC_KEY); fd.append('signature', auth.signature);
+    fd.append('expire', String(auth.expire)); fd.append('token', auth.token);
+    const r = await fetch(`${IK_ENDPOINT}/api/v1/files/upload`, { method: 'POST', body: fd });
+    if (!r.ok) return null;
+    return ((await r.json()) as { url: string }).url;
+  } catch { return null; }
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export function AdminQuizzesPage({ token }: Props) {
+export function AdminQuizzesPage({ token }: { token: string }) {
+  const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
   const [themes, setThemes] = useState<Theme[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // Theme form
   const [themeName, setThemeName] = useState('');
   const [themeDesc, setThemeDesc] = useState('');
-
-  // Quiz form
   const [quizTitle, setQuizTitle] = useState('');
   const [quizThemeId, setQuizThemeId] = useState('');
-
-  // Question form
   const [qText, setQText] = useState('');
   const [qOptions, setQOptions] = useState(['', '', '', '']);
   const [qCorrect, setQCorrect] = useState(0);
@@ -94,333 +46,132 @@ export function AdminQuizzesPage({ token }: Props) {
   const [qImageUrl, setQImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const showFeedback = (msg: string) => { setFeedback(msg); setTimeout(() => setFeedback(null), 3000); };
 
-  const loadThemes = useCallback(async () => {
-    const r = await fetch(`${API_URL}/themes`, { headers });
-    setThemes((await r.json()) as Theme[]);
-  }, []);
+  const loadThemes = useCallback(async () => { const r = await fetch(`${API_URL}/themes`, { headers: h }); setThemes((await r.json()) as Theme[]); }, []);
+  const loadQuizzes = useCallback(async () => { const r = await fetch(`${API_URL}/quizzes`, { headers: h }); setQuizzes((await r.json()) as Quiz[]); }, []);
+  const loadQuestions = useCallback(async (id: string) => { const r = await fetch(`${API_URL}/quizzes/${id}/questions`, { headers: h }); setQuestions([...(await r.json() as Question[])].sort((a, b) => a.order - b.order)); }, []);
 
-  const loadQuizzes = useCallback(async () => {
-    const r = await fetch(`${API_URL}/quizzes`, { headers });
-    setQuizzes((await r.json()) as Quiz[]);
-  }, []);
+  useEffect(() => { void loadThemes(); void loadQuizzes(); }, []);
+  useEffect(() => { if (selectedQuizId) void loadQuestions(selectedQuizId); }, [selectedQuizId]);
 
-  const loadQuestions = useCallback(async (quizId: string) => {
-    const r = await fetch(`${API_URL}/quizzes/${quizId}/questions`, { headers });
-    const data = (await r.json()) as Question[];
-    setQuestions([...data].sort((a, b) => a.order - b.order));
-  }, []);
-
-  useEffect(() => {
-    void loadThemes();
-    void loadQuizzes();
-  }, [loadThemes, loadQuizzes]);
-
-  useEffect(() => {
-    if (selectedQuizId) void loadQuestions(selectedQuizId);
-  }, [selectedQuizId, loadQuestions]);
-
-  const showFeedback = (msg: string) => {
-    setFeedback(msg);
-    setTimeout(() => setFeedback(null), 3000);
-  };
-
-  // ── Themes ──────────────────────────────────────────────────────────────
   const createTheme = async () => {
     if (!themeName.trim()) return;
-    await fetch(`${API_URL}/themes`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ name: themeName, description: themeDesc || undefined }),
-    });
-    setThemeName('');
-    setThemeDesc('');
-    await loadThemes();
-    showFeedback('Tema criado!');
+    await fetch(`${API_URL}/themes`, { method: 'POST', headers: h, body: JSON.stringify({ name: themeName, description: themeDesc || undefined }) });
+    setThemeName(''); setThemeDesc(''); await loadThemes(); showFeedback('Tema criado!');
   };
-
   const deleteTheme = async (id: string) => {
     if (!confirm('Deletar tema?')) return;
-    await fetch(`${API_URL}/themes/${id}`, { method: 'DELETE', headers });
-    await loadThemes();
-    showFeedback('Tema removido.');
+    await fetch(`${API_URL}/themes/${id}`, { method: 'DELETE', headers: h }); await loadThemes(); showFeedback('Tema removido.');
   };
-
-  // ── Quizzes ──────────────────────────────────────────────────────────────
   const createQuiz = async () => {
     if (!quizTitle.trim() || !quizThemeId) return;
-    await fetch(`${API_URL}/quizzes`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ title: quizTitle, themeId: quizThemeId }),
-    });
-    setQuizTitle('');
-    setQuizThemeId('');
-    await loadQuizzes();
-    showFeedback('Quiz criado!');
+    await fetch(`${API_URL}/quizzes`, { method: 'POST', headers: h, body: JSON.stringify({ title: quizTitle, themeId: quizThemeId }) });
+    setQuizTitle(''); setQuizThemeId(''); await loadQuizzes(); showFeedback('Quiz criado!');
   };
-
   const deleteQuiz = async (id: string) => {
-    if (!confirm('Deletar quiz e todas as perguntas?')) return;
-    await fetch(`${API_URL}/quizzes/${id}`, { method: 'DELETE', headers });
-    if (selectedQuizId === id) setSelectedQuizId(null);
-    await loadQuizzes();
-    showFeedback('Quiz removido.');
+    if (!confirm('Deletar quiz?')) return;
+    await fetch(`${API_URL}/quizzes/${id}`, { method: 'DELETE', headers: h });
+    if (selectedQuizId === id) setSelectedQuizId(null); await loadQuizzes(); showFeedback('Quiz removido.');
   };
-
-  // ── Questions ────────────────────────────────────────────────────────────
   const createQuestion = async () => {
     if (!selectedQuizId || !qText.trim() || qOptions.some((o) => !o.trim())) return;
-    let imageUrl = qImageUrl || null;
-
-    if (qImageFile) {
-      setUploading(true);
-      imageUrl = await uploadToImageKit(qImageFile, token);
-      setUploading(false);
-      if (!imageUrl) {
-        showFeedback('Erro ao fazer upload da imagem.');
-        return;
-      }
-    }
-
-    await fetch(`${API_URL}/quizzes/${selectedQuizId}/questions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        text: qText,
-        options: qOptions,
-        correctIndex: qCorrect,
-        timeLimitSec: qTime,
-        order: qOrder,
-        imageUrl,
-      }),
-    });
-    setQText('');
-    setQOptions(['', '', '', '']);
-    setQCorrect(0);
-    setQTime(20);
-    setQOrder(questions.length + 2);
-    setQImageFile(null);
-    setQImageUrl('');
-    await loadQuestions(selectedQuizId);
-    showFeedback('Pergunta adicionada!');
+    let imageUrl: string | null = qImageUrl || null;
+    if (qImageFile) { setUploading(true); imageUrl = await uploadToImageKit(qImageFile, token); setUploading(false); if (!imageUrl) { showFeedback('Erro no upload.'); return; } }
+    await fetch(`${API_URL}/quizzes/${selectedQuizId}/questions`, { method: 'POST', headers: h, body: JSON.stringify({ text: qText, options: qOptions, correctIndex: qCorrect, timeLimitSec: qTime, order: qOrder, imageUrl }) });
+    setQText(''); setQOptions(['', '', '', '']); setQCorrect(0); setQTime(20); setQOrder(questions.length + 2); setQImageFile(null); setQImageUrl('');
+    await loadQuestions(selectedQuizId); showFeedback('Pergunta adicionada!');
   };
-
-  const deleteQuestion = async (questionId: string) => {
+  const deleteQuestion = async (qid: string) => {
     if (!selectedQuizId || !confirm('Deletar pergunta?')) return;
-    await fetch(`${API_URL}/quizzes/${selectedQuizId}/questions/${questionId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    await loadQuestions(selectedQuizId);
-    showFeedback('Pergunta removida.');
+    await fetch(`${API_URL}/quizzes/${selectedQuizId}/questions/${qid}`, { method: 'DELETE', headers: h });
+    await loadQuestions(selectedQuizId); showFeedback('Pergunta removida.');
   };
+
+  const inputCls = 'w-full rounded-lg border-2 border-surface bg-surface px-3 py-2 text-sm font-medium focus:border-brand focus:outline-none';
+  const btnCls = 'rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed';
+  const deleteBtnCls = 'rounded-lg bg-option-a px-2 py-1 text-xs font-bold text-white active:scale-95 transition-all shrink-0';
 
   return (
-    <div className={styles.page}>
-      <div className={styles.topBar}>
-        <span className={styles.topBarTitle}>Gerenciar Quizzes</span>
-      </div>
-
+    <div className="min-h-dvh bg-surface">
       {feedback && (
-        <div className={styles.errorBanner} style={{ backgroundColor: 'var(--color-neon-blue)', color: '#000' }}>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-brand px-5 py-2 font-bold text-white shadow-md text-sm">
           {feedback}
         </div>
       )}
 
-      <div className={formStyles.layout}>
-        {/* ── Themes column ── */}
-        <section className={formStyles.column}>
-          <h2 className={formStyles.sectionTitle}>Temas</h2>
-
-          <div className={formStyles.form}>
-            <input
-              className={formStyles.input}
-              placeholder="Nome do tema *"
-              value={themeName}
-              onChange={(e) => setThemeName(e.target.value)}
-            />
-            <input
-              className={formStyles.input}
-              placeholder="Descrição (opcional)"
-              value={themeDesc}
-              onChange={(e) => setThemeDesc(e.target.value)}
-            />
-            <button type="button" className={formStyles.btn} onClick={() => void createTheme()}>
-              + Criar tema
-            </button>
-          </div>
-
-          <ul className={formStyles.list}>
+      <div className="flex flex-col lg:flex-row gap-0 divide-y lg:divide-y-0 lg:divide-x divide-surface-container">
+        {/* Themes */}
+        <section className="flex flex-col gap-3 p-5 lg:w-80">
+          <h2 className="font-black text-base text-brand">Temas</h2>
+          <input className={inputCls} placeholder="Nome do tema *" value={themeName} onChange={(e) => setThemeName(e.target.value)} />
+          <input className={inputCls} placeholder="Descrição (opcional)" value={themeDesc} onChange={(e) => setThemeDesc(e.target.value)} />
+          <button type="button" className={btnCls} onClick={() => void createTheme()}>+ Criar tema</button>
+          <ul className="flex flex-col gap-2 mt-2">
             {themes.map((t) => (
-              <li key={t.id} className={formStyles.listItem}>
-                <div>
-                  <strong>{t.name}</strong>
-                  {t.description && <span className={formStyles.muted}> — {t.description}</span>}
-                </div>
-                <button type="button" className={formStyles.deleteBtn} onClick={() => void deleteTheme(t.id)}>
-                  ✕
-                </button>
+              <li key={t.id} className="flex items-center justify-between rounded-lg border border-surface-container p-3 text-sm">
+                <div><strong>{t.name}</strong>{t.description && <span className="ml-1 text-gray-400">— {t.description}</span>}</div>
+                <button type="button" className={deleteBtnCls} onClick={() => void deleteTheme(t.id)}>✕</button>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* ── Quizzes column ── */}
-        <section className={formStyles.column}>
-          <h2 className={formStyles.sectionTitle}>Quizzes</h2>
-
-          <div className={formStyles.form}>
-            <input
-              className={formStyles.input}
-              placeholder="Título do quiz *"
-              value={quizTitle}
-              onChange={(e) => setQuizTitle(e.target.value)}
-            />
-            <select
-              className={formStyles.select}
-              value={quizThemeId}
-              onChange={(e) => setQuizThemeId(e.target.value)}
-            >
-              <option value="">Selecione o tema *</option>
-              {themes.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            <button type="button" className={formStyles.btn} onClick={() => void createQuiz()}>
-              + Criar quiz
-            </button>
-          </div>
-
-          <ul className={formStyles.list}>
+        {/* Quizzes */}
+        <section className="flex flex-col gap-3 p-5 lg:w-80">
+          <h2 className="font-black text-base text-brand">Quizzes</h2>
+          <input className={inputCls} placeholder="Título do quiz *" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} />
+          <select className={inputCls} value={quizThemeId} onChange={(e) => setQuizThemeId(e.target.value)}>
+            <option value="">Selecione o tema *</option>
+            {themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <button type="button" className={btnCls} onClick={() => void createQuiz()}>+ Criar quiz</button>
+          <ul className="flex flex-col gap-2 mt-2">
             {quizzes.map((q) => (
-              <li
-                key={q.id}
-                className={`${formStyles.listItem} ${selectedQuizId === q.id ? formStyles.listItemSelected : ''}`}
-                onClick={() => setSelectedQuizId(q.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div>
-                  <strong>{q.title}</strong>
-                  <span className={formStyles.muted}> — {q.theme.name} ({q._count.questions} perguntas)</span>
-                </div>
-                <button
-                  type="button"
-                  className={formStyles.deleteBtn}
-                  onClick={(e) => { e.stopPropagation(); void deleteQuiz(q.id); }}
-                >
-                  ✕
-                </button>
+              <li key={q.id}
+                className={cn('flex items-center justify-between rounded-lg border p-3 text-sm cursor-pointer transition-colors', selectedQuizId === q.id ? 'border-brand bg-brand/5' : 'border-surface-container hover:bg-surface-container')}
+                onClick={() => setSelectedQuizId(q.id)}>
+                <div><strong>{q.title}</strong><span className="ml-1 text-gray-400">— {q.theme.name} ({q._count.questions})</span></div>
+                <button type="button" className={deleteBtnCls} onClick={(e) => { e.stopPropagation(); void deleteQuiz(q.id); }}>✕</button>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* ── Questions column ── */}
+        {/* Questions */}
         {selectedQuizId && (
-          <section className={formStyles.column}>
-            <h2 className={formStyles.sectionTitle}>Perguntas</h2>
-
-            <div className={formStyles.form}>
-              <textarea
-                className={formStyles.textarea}
-                placeholder="Texto da pergunta *"
-                value={qText}
-                onChange={(e) => setQText(e.target.value)}
-                rows={3}
-              />
-              {qOptions.map((opt, i) => (
-                <div key={i} className={formStyles.optionRow}>
-                  <input
-                    type="radio"
-                    name="correct"
-                    checked={qCorrect === i}
-                    onChange={() => setQCorrect(i)}
-                    aria-label={`Alternativa ${i + 1} correta`}
-                  />
-                  <input
-                    className={formStyles.input}
-                    placeholder={`Alternativa ${i + 1} *`}
-                    value={opt}
-                    onChange={(e) => {
-                      const updated = [...qOptions];
-                      updated[i] = e.target.value;
-                      setQOptions(updated);
-                    }}
-                  />
-                </div>
-              ))}
-
-              <div className={formStyles.row}>
-                <label className={formStyles.label}>
-                  Tempo (seg):
-                  <input
-                    type="number"
-                    className={formStyles.inputSmall}
-                    value={qTime}
-                    min={5}
-                    max={120}
-                    onChange={(e) => setQTime(Number(e.target.value))}
-                  />
-                </label>
-                <label className={formStyles.label}>
-                  Ordem:
-                  <input
-                    type="number"
-                    className={formStyles.inputSmall}
-                    value={qOrder}
-                    min={1}
-                    onChange={(e) => setQOrder(Number(e.target.value))}
-                  />
-                </label>
+          <section className="flex flex-col gap-3 p-5 flex-1">
+            <h2 className="font-black text-base text-brand">Perguntas</h2>
+            <textarea className={cn(inputCls, 'resize-y')} placeholder="Texto da pergunta *" value={qText} onChange={(e) => setQText(e.target.value)} rows={3} />
+            {qOptions.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input type="radio" name="correct" checked={qCorrect === i} onChange={() => setQCorrect(i)} aria-label={`Alt ${i + 1} correta`} className="accent-brand" />
+                <input className={inputCls} placeholder={`Alternativa ${i + 1} *`} value={opt} onChange={(e) => { const u = [...qOptions]; u[i] = e.target.value; setQOptions(u); }} />
               </div>
-
-              <label className={formStyles.label}>
-                Imagem (upload):
-                <input
-                  type="file"
-                  accept="image/*"
-                  className={formStyles.fileInput}
-                  onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)}
-                />
+            ))}
+            <div className="flex gap-3">
+              <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+                Tempo (s)
+                <input type="number" className={cn(inputCls, 'w-20')} value={qTime} min={5} max={120} onChange={(e) => setQTime(Number(e.target.value))} />
               </label>
-
-              <label className={formStyles.label}>
-                Ou URL da imagem:
-                <input
-                  className={formStyles.input}
-                  placeholder="https://..."
-                  value={qImageUrl}
-                  onChange={(e) => setQImageUrl(e.target.value)}
-                />
+              <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+                Ordem
+                <input type="number" className={cn(inputCls, 'w-20')} value={qOrder} min={1} onChange={(e) => setQOrder(Number(e.target.value))} />
               </label>
-
-              <button
-                type="button"
-                className={formStyles.btn}
-                disabled={uploading || !qText.trim() || qOptions.some((o) => !o.trim())}
-                onClick={() => void createQuestion()}
-              >
-                {uploading ? 'Enviando imagem...' : '+ Adicionar pergunta'}
-              </button>
             </div>
-
-            <ul className={formStyles.list}>
+            <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+              Imagem (upload)
+              <input type="file" accept="image/*" className="text-sm" onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)} />
+            </label>
+            <input className={inputCls} placeholder="Ou URL da imagem: https://..." value={qImageUrl} onChange={(e) => setQImageUrl(e.target.value)} />
+            <button type="button" className={btnCls} disabled={uploading || !qText.trim() || qOptions.some((o) => !o.trim())} onClick={() => void createQuestion()}>
+              {uploading ? 'Enviando...' : '+ Adicionar pergunta'}
+            </button>
+            <ul className="flex flex-col gap-2 mt-2">
               {questions.map((q, idx) => (
-                <li key={q.id} className={formStyles.listItem}>
-                  <div>
-                    <span className={formStyles.muted}>{idx + 1}. </span>
-                    <strong>{q.text}</strong>
-                    <span className={formStyles.muted}> ({q.timeLimitSec}s)</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={formStyles.deleteBtn}
-                    onClick={() => void deleteQuestion(q.id)}
-                  >
-                    ✕
-                  </button>
+                <li key={q.id} className="flex items-center justify-between rounded-lg border border-surface-container p-3 text-sm">
+                  <div><span className="text-gray-400">{idx + 1}. </span><strong>{q.text}</strong><span className="ml-1 text-gray-400">({q.timeLimitSec}s)</span></div>
+                  <button type="button" className={deleteBtnCls} onClick={() => void deleteQuestion(q.id)}>✕</button>
                 </li>
               ))}
             </ul>

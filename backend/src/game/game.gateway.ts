@@ -98,6 +98,13 @@ export class GameGateway
 
   // ─── Professor → Server ──────────────────────────────────────────────────
 
+  /** Admin joins the 'admins' room and gets the current game state immediately */
+  @SubscribeMessage('admin:conectar')
+  async handleAdminConectar(@ConnectedSocket() client: Socket): Promise<void> {
+    await client.join('admins');
+    this._emitAdminEstado();
+  }
+
   @SubscribeMessage('admin:selecionarTema')
   async handleSelecionarTema(
     @ConnectedSocket() client: Socket,
@@ -185,6 +192,8 @@ export class GameGateway
         imageUrl: question.imageUrl,
         options: question.options,
         timeLimitSec: question.timeLimitSec,
+        order: state.currentQuestionIndex + 1,
+        totalQuestions: this.questions.length,
       });
 
       this._emitAdminEstado();
@@ -220,6 +229,45 @@ export class GameGateway
       this.logger.error('admin:proximaPergunta error', err);
       client.emit('game:erro', {
         message: err instanceof Error ? err.message : 'Erro ao avançar pergunta.',
+      });
+    }
+  }
+
+  /** Professor manually closes the room — before the game starts or mid-game */
+  @SubscribeMessage('admin:encerrarSala')
+  async handleEncerrarSala(@ConnectedSocket() client: Socket): Promise<void> {
+    try {
+      const state = this.gameStateService.state;
+
+      if (state.status === 'lobby' && !state.gameSessionId) {
+        client.emit('game:erro', { message: 'Nenhuma sala aberta para encerrar.' });
+        return;
+      }
+
+      // Stop any pending question timer
+      this.gameStateService.clearTimer();
+
+      // Mark the session as finished in Neon, same as a normal game end
+      if (state.gameSessionId) {
+        try {
+          await this.gameResultsService.finalizarSessao(state.gameSessionId);
+        } catch (dbErr) {
+          this.logger.error('Failed to update GameSession status on encerrarSala', dbErr);
+        }
+      }
+
+      // Tell every connected player the room is closed
+      this.server.to('players').emit('game:salaEncerrada');
+
+      // Reset in-memory state
+      this.gameStateService.resetar();
+      this.questions = [];
+
+      this._emitAdminEstado();
+    } catch (err) {
+      this.logger.error('admin:encerrarSala error', err);
+      client.emit('game:erro', {
+        message: err instanceof Error ? err.message : 'Erro ao encerrar sala.',
       });
     }
   }
@@ -317,12 +365,13 @@ export class GameGateway
 
   // ─── Private helpers ─────────────────────────────────────────────────────
 
-  /** Emit game:estado to the players room */
+  /** Emit game:estado to everyone connected (including players not in the room yet) */
   private _broadcastEstado(): void {
     const state = this.gameStateService.state;
-    this.server.to('players').emit('game:estado', {
+    this.server.emit('game:estado', {
       status: state.status,
       playerCount: state.players.size,
+      totalQuestions: this.questions.length,
     });
   }
 

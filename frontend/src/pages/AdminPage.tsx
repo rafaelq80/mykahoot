@@ -3,79 +3,61 @@ import { AdminLoginPage } from './AdminLoginPage';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import { AdminQuizzesPage } from './AdminQuizzesPage';
 import { AdminHistoricoPage } from './AdminHistoricoPage';
-import styles from '../styles/AdminPage.module.css';
+import { cn } from '../lib/utils';
 
-type AdminTab = 'dashboard' | 'quizzes' | 'historico';
+type Tab = 'dashboard' | 'quizzes' | 'historico';
 
 export function AdminPage() {
-  const [token, setToken] = useState<string | null>(() =>
-    sessionStorage.getItem('admin_token'),
-  );
-  const [tab, setTab] = useState<AdminTab>('dashboard');
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('admin_token'));
+  const [tab, setTab] = useState<Tab>('dashboard');
 
-  const handleLogin = (t: string) => {
-    sessionStorage.setItem('admin_token', t);
-    setToken(t);
-  };
+  const handleLogin = (t: string) => { sessionStorage.setItem('admin_token', t); setToken(t); };
+  const handleLogout = () => { sessionStorage.removeItem('admin_token'); setToken(null); };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin_token');
-    setToken(null);
-  };
+  if (!token) return <AdminLoginPage onLogin={handleLogin} />;
 
-  if (!token) {
-    return <AdminLoginPage onLogin={handleLogin} />;
-  }
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'dashboard', label: 'Partida' },
+    { id: 'quizzes', label: 'Quizzes' },
+    { id: 'historico', label: 'Histórico' },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      {/* Shared nav bar */}
-      <div className={styles.topBar}>
-        <span className={styles.topBarTitle}>QuizLive</span>
-        <div className={styles.navTabs}>
+    <div className="flex min-h-dvh flex-col bg-surface">
+      {/* Persistent nav — always visible */}
+      <nav className="flex shrink-0 items-center gap-1 border-b border-surface-container bg-surface px-4 py-2.5 shadow-sm">
+        <span className="mr-4 font-black text-lg text-brand">QuizLive</span>
+        {tabs.map((t) => (
           <button
+            key={t.id}
             type="button"
-            className={`${styles.navTab} ${tab === 'dashboard' ? styles.navTabActive : ''}`}
-            onClick={() => setTab('dashboard')}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-sm font-bold transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+              tab === t.id
+                ? 'bg-brand text-white'
+                : 'text-gray-600 hover:bg-surface-container',
+            )}
           >
-            Partida
+            {t.label}
           </button>
-          <button
-            type="button"
-            className={`${styles.navTab} ${tab === 'quizzes' ? styles.navTabActive : ''}`}
-            onClick={() => setTab('quizzes')}
-          >
-            Quizzes
-          </button>
-          <button
-            type="button"
-            className={`${styles.navTab} ${tab === 'historico' ? styles.navTabActive : ''}`}
-            onClick={() => setTab('historico')}
-          >
-            Histórico
-          </button>
-        </div>
-        <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
+        ))}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="ml-auto rounded-lg border border-surface-container px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-surface-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
           Sair
         </button>
-      </div>
+      </nav>
 
-      {/* Tab content — rendered without top bar duplication */}
-      {tab === 'dashboard' && (
-        <AdminDashboardPageInner token={token} onLogout={handleLogout} />
-      )}
-      {tab === 'quizzes' && <AdminQuizzesPage token={token} />}
-      {tab === 'historico' && <AdminHistoricoPage token={token} />}
+      {/* Content area */}
+      <div className="flex flex-1 flex-col overflow-auto">
+        {tab === 'dashboard' && <AdminDashboardPage token={token} onLogout={handleLogout} />}
+        {tab === 'quizzes' && <AdminQuizzesPage token={token} />}
+        {tab === 'historico' && <AdminHistoricoPage token={token} />}
+      </div>
     </div>
   );
-}
-
-function AdminDashboardPageInner({
-  token,
-  onLogout,
-}: {
-  token: string;
-  onLogout: () => void;
-}) {
-  return <AdminDashboardPage token={token} onLogout={onLogout} hideTopBar />;
 }

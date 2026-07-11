@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Spec Tasks Status Sync",
+  "description": "Depois que uma tarefa de implementação é concluída, marca o checkbox correspondente no tasks.md da spec ativa para manter o progresso visível e reduzir a necessidade de reler toda a spec em conversas futuras.",
+  "version": "1",
+  "when": {
+    "type": "postTaskExecution",
+    "patterns": [".kiro/specs/**/tasks.md"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Uma tarefa de implementação relacionada a uma spec em .kiro/specs foi concluída nesta sessão. Identifique qual item de tasks.md da spec correspondente foi efetivamente implementado (comparando com os arquivos criados/editados na sessão) e marque a caixa como concluída (- [x]) nesse arquivo. Não marque tarefas que ainda não foram implementadas de fato, mesmo que relacionadas. Não reescreva o restante do arquivo."
+  }
+}

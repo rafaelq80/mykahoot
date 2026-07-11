@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Sync WebSocket Event Types",
+  "description": "Ao editar os contratos de evento do backend (game.types.ts) ou do frontend (events.ts), verifica se o outro lado ainda está sincronizado e sinaliza divergências.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["backend/src/game/game.types.ts", "frontend/src/types/events.ts"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Um dos dois arquivos de contrato de eventos WebSocket foi editado: backend/src/game/game.types.ts ou frontend/src/types/events.ts. Leia ambos os arquivos e compare: todo evento, payload e nome de campo definido em um deve ter um equivalente compatível no outro (nomes de evento como player:*, admin:*, game:* devem bater exatamente). Liste qualquer divergência encontrada (evento faltando de um lado, campo com tipo diferente, campo renomeado) e proponha a edição necessária no arquivo que ficou desatualizado para restaurar a sincronia. Não invente eventos que não existem em nenhum dos dois arquivos."
+  }
+}

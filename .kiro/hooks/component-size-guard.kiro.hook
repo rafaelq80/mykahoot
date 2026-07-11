@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Component Size Guard",
+  "description": "Ao salvar um componente React, verifica se ele ultrapassou o limite de linhas definido em structure.md e sugere extração de sub-componentes/hooks.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["frontend/src/pages/**/*.tsx", "frontend/src/features/**/*.tsx"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "O arquivo que acabou de ser salvo é um componente React dentro de frontend/src/pages ou frontend/src/features. Conte as linhas do arquivo. Se estiver em frontend/src/pages e ultrapassar 80 linhas, ou se estiver em frontend/src/features/*/components e ultrapassar 150 linhas, identifique blocos de responsabilidade misturada (ex.: chamadas de socket, cálculo de estado, JSX de UI pura) e proponha a extração para um custom hook em features/<feature>/hooks ou para um sub-componente em components/shared, seguindo as convenções de frontend-conventions.md. Não faça a extração automaticamente sem pedir confirmação — apenas descreva o plano de refatoração proposto."
+  }
+}

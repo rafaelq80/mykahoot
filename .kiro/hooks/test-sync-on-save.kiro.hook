@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Test Sync on Save",
+  "description": "Ao salvar um hook ou componente em features/, garante que o teste correspondente existe e cobre o comportamento atual.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["frontend/src/features/**/hooks/*.ts", "frontend/src/features/**/components/*.tsx"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "O arquivo salvo é um hook ou componente dentro de frontend/src/features. Verifique se existe um arquivo de teste correspondente (*.test.ts ou *.test.tsx) no mesmo diretório. Se não existir, crie um teste básico com Vitest + Testing Library cobrindo o caminho feliz e pelo menos um caso de erro/borda. Se já existir, verifique se ele ainda cobre as props/retornos atuais do arquivo editado e atualize o que estiver desatualizado. Para hooks que usam o socket, use um mock de socket (createMockSocket) em vez de conectar de verdade, conforme frontend-conventions.md."
+  }
+}
