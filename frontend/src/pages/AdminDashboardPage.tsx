@@ -66,12 +66,6 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
     setRoomOpen(false);
   }, [encerrarSala]);
 
-  // Reset roomOpen when game ends and screen goes back to lobby on reload
-  useEffect(() => {
-    if (screen !== 'lobby') return;
-    // If screen just became lobby again after a game, allow re-opening
-  }, [screen]);
-
   /* ── Lobby ── */
   if (screen === 'lobby') {
     return (
@@ -89,7 +83,7 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
 
   /* ── Active game: sidebar + control panel ── */
   return (
-    <div className="flex flex-1 flex-col lg:flex-row bg-surface">
+    <div className="flex flex-1 flex-col lg:flex-row bg-brand">
       <PlayersSidebar />
       <div className="flex flex-1 flex-col gap-5 p-5">
         <QuestionControlPanel

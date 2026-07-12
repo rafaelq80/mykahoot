@@ -23,9 +23,11 @@ export function AdminPage() {
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
-      {/* Persistent nav — always visible */}
-      <nav className="flex shrink-0 items-center gap-1 border-b border-surface-container bg-surface px-4 py-2.5 shadow-sm">
+    // Fundo roxo (mesmo padrão dos players), com header/footer brancos
+    // pra diferenciar visualmente a área do professor.
+    <div className="flex min-h-dvh flex-col bg-brand">
+      {/* Persistent nav — header branco, sempre visível */}
+      <nav className="flex shrink-0 items-center gap-1 border-b border-surface-container bg-white px-4 py-2.5 shadow-sm">
         <span className="mr-4 font-black text-lg text-brand">QuizLive</span>
         {tabs.map((t) => (
           <button
@@ -52,12 +54,17 @@ export function AdminPage() {
         </button>
       </nav>
 
-      {/* Content area */}
+      {/* Content area — fundo roxo herdado do container */}
       <div className="flex flex-1 flex-col overflow-auto">
         {tab === 'dashboard' && <AdminDashboardPage token={token} onLogout={handleLogout} />}
         {tab === 'quizzes' && <AdminQuizzesPage token={token} />}
         {tab === 'historico' && <AdminHistoricoPage token={token} />}
       </div>
+
+      {/* Footer branco — diferencia da tela de players (footer roxo) */}
+      <footer className="flex shrink-0 items-center justify-center border-t border-surface-container bg-white px-4 py-2.5 text-xs font-medium text-gray-400">
+        QuizLive · Painel do Professor
+      </footer>
     </div>
   );
 }

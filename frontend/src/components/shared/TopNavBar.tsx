@@ -47,19 +47,21 @@ function SettingsIcon() {
 
 export function TopNavBar({ className, onVolumeClick, onSettingsClick }: TopNavBarProps) {
   const iconBtnClass = cn(
-    'flex h-9 w-9 items-center justify-center rounded-lg text-brand',
-    'transition-colors hover:bg-brand/10',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+    'flex h-9 w-9 items-center justify-center rounded-lg text-white',
+    'transition-colors hover:bg-white/10',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
   );
 
   return (
     <header
       className={cn(
-        'flex items-center justify-between bg-white px-8 py-4 shadow-sm',
+        // Header roxo (players) — transparente sobre o fundo bg-brand da tela,
+        // com uma linha sutil pra separar do conteúdo abaixo.
+        'flex items-center justify-between border-b border-white/10 bg-transparent px-8 py-4',
         className,
       )}
     >
-      <span className="font-black text-xl tracking-tight text-brand">QuizMaster Live</span>
+      <span className="font-black text-xl tracking-tight text-white">QuizMaster Live</span>
 
       <div className="flex items-center gap-2">
         <button

@@ -40,24 +40,13 @@ export function AdminLoginPage({ onLogin }: Props) {
   const canSubmit = !loading && username.trim().length > 0 && password.trim().length > 0;
 
   return (
-    <div className="relative min-h-dvh flex flex-col" style={{ backgroundColor: '#3d0b99' }}>
-      {/* Dot pattern */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
-
+    <div className="relative min-h-dvh flex flex-col bg-brand bg-dot-pattern">
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm animate-[slideUp_0.35s_ease_both]">
           {/* Logo above card */}
           <div className="mb-6 text-center">
             <div
-              className="inline-flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-xl mb-3"
-              style={{ background: 'linear-gradient(135deg, #46178f 0%, #7c3aed 100%)' }}
+              className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-3xl shadow-xl mb-3"
               aria-hidden="true"
             >
               🎯

@@ -125,7 +125,7 @@ export function QuestionControlPanel({
       {/* ── Game over ── */}
       {screen === 'game_over' && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl bg-brand/10 border-2 border-brand/20 px-5 py-4 text-center">
+          <div className="rounded-2xl bg-surface-container border-2 border-white/40 px-5 py-4 text-center">
             <p className="font-black text-2xl text-brand">🏆 Partida encerrada!</p>
             <p className="text-sm text-gray-500 mt-1 font-medium">
               Veja o ranking completo abaixo

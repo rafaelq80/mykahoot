@@ -36,8 +36,7 @@ export default function LobbyPage() {
         {playerInfo && (
           <div className="flex flex-col items-center gap-3 animate-fade-in">
             <div
-              className="flex h-32 w-32 items-center justify-center rounded-full text-6xl shadow-xl border-4 border-quiz-border"
-              style={{ backgroundColor: '#F8F1FC' }}
+              className="flex h-32 w-32 items-center justify-center rounded-full bg-surface-container text-6xl shadow-xl border-4 border-quiz-border"
               aria-hidden="true"
             >
               {playerInfo.avatar}

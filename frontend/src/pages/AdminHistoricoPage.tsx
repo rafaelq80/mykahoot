@@ -22,14 +22,15 @@ export function AdminHistoricoPage({ token }: { token: string }) {
   }, [token]);
 
   if (loading) return (
-    <div className="flex min-h-dvh items-center justify-center bg-surface">
-      <p className="animate-pulse font-bold text-brand">Carregando...</p>
+    <div className="flex min-h-full flex-1 items-center justify-center p-6">
+      <p className="animate-pulse font-bold text-white">Carregando...</p>
     </div>
   );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
-      <div className="flex flex-1 flex-col lg:flex-row">
+    <div className="min-h-full flex-1 p-4 sm:p-6">
+      {/* Card branco sobre o fundo roxo do admin, mesmo padrão do AdminQuizzesPage */}
+      <div className="flex flex-1 flex-col lg:flex-row rounded-2xl bg-white shadow-xl overflow-hidden">
         {/* List */}
         <aside className="flex flex-col gap-2 border-r border-surface-container p-4 lg:w-80">
           <h2 className="font-black text-lg text-brand mb-2">Histórico de Partidas</h2>

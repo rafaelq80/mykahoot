@@ -25,19 +25,12 @@ export function WaitingRoomPanel({
   const players = useAdminStore((s) => s.players);
   const errorMessage = useAdminStore((s) => s.errorMessage);
 
-  const dotPattern: React.CSSProperties = {
-    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
-    backgroundSize: '28px 28px',
-  };
-
   /* ─────────────────────────────────────────────────
    * STATE A — room not open yet: quiz selector
    * ───────────────────────────────────────────────── */
   if (!roomOpen) {
     return (
-      <div className="relative flex min-h-[calc(100dvh-52px)] flex-col" style={{ backgroundColor: '#3d0b99' }}>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={dotPattern} />
-
+      <div className="relative flex min-h-[calc(100dvh-52px)] flex-col bg-brand bg-dot-pattern">
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12">
           <div className="text-center">
             <h1 className="font-black text-4xl text-white">Abrir Sala</h1>
@@ -88,9 +81,7 @@ export function WaitingRoomPanel({
    * STATE B — room open: player grid + start button
    * ───────────────────────────────────────────────── */
   return (
-    <div className="relative flex min-h-[calc(100dvh-52px)] flex-col" style={{ backgroundColor: '#3d0b99' }}>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={dotPattern} />
-
+    <div className="relative flex min-h-[calc(100dvh-52px)] flex-col bg-brand bg-dot-pattern">
       {/* Main scrollable area */}
       <div className="relative z-10 flex flex-1 flex-col px-6 pt-8 pb-4 gap-6">
 
@@ -100,8 +91,7 @@ export function WaitingRoomPanel({
             Aguardando jogadores...
           </h1>
           <div
-            className="flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-white"
-            style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+            className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-white"
           >
             <span className="h-2 w-2 rounded-full bg-white animate-pulse motion-reduce:animate-none" aria-hidden="true" />
             SESSÃO AO VIVO
@@ -118,13 +108,11 @@ export function WaitingRoomPanel({
             {players.map((p) => (
               <div
                 key={p.socketId}
-                className="flex flex-col items-center gap-2 rounded-2xl p-4 animate-[slideUp_0.3s_ease_both]"
-                style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
+                className="flex flex-col items-center gap-2 rounded-2xl bg-white/10 p-4 animate-[slideUp_0.3s_ease_both]"
               >
                 {/* Avatar circle */}
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full text-4xl shadow-lg"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-4xl shadow-lg"
                   aria-hidden="true"
                 >
                   {p.avatar}
@@ -138,16 +126,13 @@ export function WaitingRoomPanel({
         )}
       </div>
 
-      {/* Bottom bar — sticky */}
-      <div
-        className="relative z-10 flex items-center justify-between px-6 py-4 mt-auto"
-        style={{ backgroundColor: 'rgba(0,0,0,0.30)', backdropFilter: 'blur(8px)' }}
-      >
+      {/* Rodapé branco — diferencia da tela de players (rodapé roxo) */}
+      <div className="relative z-10 flex items-center justify-between bg-white px-6 py-4 mt-auto shadow-[0_-4px_16px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col leading-tight">
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
             JOGADORES
           </span>
-          <span className="font-black text-4xl text-white tabular-nums">
+          <span className="font-black text-4xl text-brand tabular-nums">
             {players.length}
           </span>
         </div>
@@ -161,9 +146,9 @@ export function WaitingRoomPanel({
               }
             }}
             className={cn(
-              'rounded-xl border-2 border-white/30 px-6 py-3.5 font-black text-base tracking-wide text-white',
-              'transition-all active:scale-95 motion-reduce:transition-none hover:bg-white/10',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 cursor-pointer',
+              'rounded-xl border-2 border-option-a px-6 py-3.5 font-black text-base tracking-wide text-option-a',
+              'transition-all active:scale-95 motion-reduce:transition-none hover:bg-option-a/10',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-option-a focus-visible:ring-offset-2 cursor-pointer',
             )}
           >
             FINALIZAR JOGO
@@ -174,14 +159,13 @@ export function WaitingRoomPanel({
             onClick={onLiberarPergunta}
             disabled={players.length === 0}
             className={cn(
-              'rounded-xl px-8 py-3.5 font-black text-base tracking-wide',
+              'rounded-xl px-8 py-3.5 font-black text-base tracking-wide text-white',
               'transition-all active:scale-95 motion-reduce:transition-none',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
               players.length > 0
-                ? 'bg-white text-brand hover:opacity-90 shadow-xl cursor-pointer'
-                : 'cursor-not-allowed',
+                ? 'bg-brand hover:opacity-90 shadow-xl cursor-pointer'
+                : 'bg-gray-300 cursor-not-allowed',
             )}
-            style={players.length === 0 ? { backgroundColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.4)' } : undefined}
           >
             INICIAR JOGO ›
           </button>

@@ -93,14 +93,15 @@ export function AdminQuizzesPage({ token }: { token: string }) {
   const deleteBtnCls = 'rounded-lg bg-option-a px-2 py-1 text-xs font-bold text-white active:scale-95 transition-all shrink-0';
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-full flex-1 p-4 sm:p-6">
       {feedback && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-brand px-5 py-2 font-bold text-white shadow-md text-sm">
           {feedback}
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-0 divide-y lg:divide-y-0 lg:divide-x divide-surface-container">
+      {/* Card branco sobre o fundo roxo do admin, mesmo padrão do login/join de players */}
+      <div className="rounded-2xl bg-white shadow-xl flex flex-col lg:flex-row gap-0 divide-y lg:divide-y-0 lg:divide-x divide-surface-container overflow-hidden">
         {/* Themes */}
         <section className="flex flex-col gap-3 p-5 lg:w-80">
           <h2 className="font-black text-base text-brand">Temas</h2>

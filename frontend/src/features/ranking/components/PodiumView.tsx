@@ -7,9 +7,6 @@ export function PodiumView() {
   const finalResult = useGameStore((s) => s.finalResult);
   const playerInfo = useGameStore((s) => s.playerInfo);
   const playerCount = useGameStore((s) => s.playerCount);
-  
-  // Resgata o estado de admin do store (ajuste a propriedade 'isAdmin' se o nome no seu store for diferente)
-  const isAdmin = useGameStore((s) => (s as any).isAdmin) ?? false;
 
   if (!finalResult) return null;
 
@@ -23,10 +20,6 @@ export function PodiumView() {
   const second = top5[1];
   const third = top5[2];
   const restEntries = top5.slice(3);
-
-  const handleShowFullRanking = () => {
-    console.log('Exibindo ranking completo para o administrador...');
-  };
 
   return (
     <div className="w-full flex flex-col min-h-dvh">
@@ -66,7 +59,7 @@ export function PodiumView() {
           {second ? (
             <div className="flex flex-col items-center flex-1 min-w-0">
               <div className="relative mb-2">
-                <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full text-4xl shadow-xl border-4 border-gray-400 bg-[#F8F1FC]">
+                <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full text-4xl shadow-xl border-4 border-gray-400 bg-surface-container">
                   {second.avatar}
                 </div>
               </div>
@@ -89,7 +82,7 @@ export function PodiumView() {
           {first ? (
             <div className="flex flex-col items-center flex-1 min-w-0 z-10">
               <div className="relative mb-2">
-                <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full text-5xl shadow-2xl border-4 border-yellow-400 bg-[#F8F1FC]">
+                <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full text-5xl shadow-2xl border-4 border-yellow-400 bg-surface-container">
                   {first.avatar}
                 </div>
               </div>
@@ -112,7 +105,7 @@ export function PodiumView() {
           {third ? (
             <div className="flex flex-col items-center flex-1 min-w-0">
               <div className="relative mb-2">
-                <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full text-3xl shadow-xl border-4 border-orange-500 bg-[#F8F1FC]">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full text-3xl shadow-xl border-4 border-orange-500 bg-surface-container">
                   {third.avatar}
                 </div>
               </div>
@@ -173,17 +166,7 @@ export function PodiumView() {
             <span className="font-white text-lg ml-1">
               {you.position}º de {playerCount}
             </span>
-          </p> 
-
-          {/* Exibição exclusiva para Admin */}
-          {isAdmin && (
-            <button
-              onClick={handleShowFullRanking}
-              className="w-full max-w-xs bg-white hover:bg-gray-100 text-quiz-bg-to font-extrabold py-3 px-6 rounded-xl shadow-lg uppercase tracking-wider text-label-xs transition-transform active:scale-95 mt-2"
-            >
-              Exibir Ranking Completo
-            </button>
-          )}
+          </p>
         </div>
 
       </div>

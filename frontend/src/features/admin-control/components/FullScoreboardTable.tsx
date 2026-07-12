@@ -15,7 +15,7 @@ export function FullScoreboardTable() {
   if (rows.length === 0) return null;
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-surface-container">
+    <div className="w-full overflow-x-auto rounded-xl border border-surface-container bg-surface shadow-md">
       <table className="w-full text-sm" aria-label="Placar completo">
         <thead className="bg-surface-container text-xs uppercase text-gray-500">
           <tr>
