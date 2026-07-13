@@ -15,6 +15,8 @@ import type {
 export function usePlayerSocket() {
   const setScreen = useGameStore((s) => s.setScreen);
   const setErrorMessage = useGameStore((s) => s.setErrorMessage);
+  const setPlayerInfo = useGameStore((s) => s.setPlayerInfo);
+  const setJoinPending = useGameStore((s) => s.setJoinPending);
   const handleEstado = useGameStore((s) => s.handleEstado);
   const handlePergunta = useGameStore((s) => s.handlePergunta);
   const handleResultado = useGameStore((s) => s.handleResultado);
@@ -37,7 +39,17 @@ export function usePlayerSocket() {
     const onGamePergunta = (data: GamePerguntaEvent) => handlePergunta(data);
     const onGameResultado = (data: GameResultadoPerguntaEvent) => handleResultado(data);
     const onGameFim = (data: GameFimEvent) => handleFim(data);
-    const onGameErro = (data: { message: string }) => setErrorMessage(data.message);
+    const onGameErro = (data: { message: string }) => {
+      const pending = useGameStore.getState().joinPending;
+      if (pending) {
+        setPlayerInfo(null);
+        setJoinPending(false);
+      }
+      setErrorMessage(data.message);
+    };
+
+    const onMusica = (data: { enabled: boolean }) =>
+      useGameStore.getState().setMusicEnabledByAdmin(data.enabled);
 
     // Professor ended the room (before or during the game) — send everyone back to the entry screen
     const onSalaEncerrada = () => {
@@ -53,6 +65,7 @@ export function usePlayerSocket() {
     socket.on('game:fim', onGameFim);
     socket.on('game:erro', onGameErro);
     socket.on('game:salaEncerrada', onSalaEncerrada);
+    socket.on('game:musica', onMusica);
 
     if (!socket.connected) socket.connect();
 
@@ -65,6 +78,7 @@ export function usePlayerSocket() {
       socket.off('game:fim', onGameFim);
       socket.off('game:erro', onGameErro);
       socket.off('game:salaEncerrada', onSalaEncerrada);
+      socket.off('game:musica', onMusica);
     };
-  }, [setScreen, setErrorMessage, handleEstado, handlePergunta, handleResultado, handleFim]);
+  }, [setScreen, setErrorMessage, setPlayerInfo, setJoinPending, handleEstado, handlePergunta, handleResultado, handleFim]);
 }

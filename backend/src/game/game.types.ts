@@ -28,6 +28,8 @@ export interface GameState {
   questionTimer: NodeJS.Timeout | null;
   /** socketId → player */
   players: Map<string, PlayerState>;
+  /** Música controlada pelo professor — broadcast para todos */
+  musicEnabled: boolean;
 }
 
 /** Subconjunto de Question (Prisma) necessário para cálculo de resultado */

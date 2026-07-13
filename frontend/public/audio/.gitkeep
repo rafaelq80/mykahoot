@@ -1,0 +1,2 @@
+# Coloque aqui os arquivos MP3 referenciados em features/background-music/constants.ts.
+# Se ausentes, o app usa síntese Web Audio como fallback.

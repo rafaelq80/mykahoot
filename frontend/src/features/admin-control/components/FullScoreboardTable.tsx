@@ -15,7 +15,10 @@ export function FullScoreboardTable() {
   if (rows.length === 0) return null;
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-surface-container bg-surface shadow-md">
+    <div className="w-full overflow-x-auto rounded-2xl border-2 border-white/20 bg-white shadow-md">
+      <div className="border-b border-surface-container px-4 py-3">
+        <h3 className="font-black text-brand">Placar completo</h3>
+      </div>
       <table className="w-full text-sm" aria-label="Placar completo">
         <thead className="bg-surface-container text-xs uppercase text-gray-500">
           <tr>
@@ -36,8 +39,15 @@ export function FullScoreboardTable() {
                 {entry.score.toLocaleString()}
               </td>
               {screen === 'showing_result' && 'correct' in entry && (
-                <td className={cn('px-3 py-2 text-center font-mono', entry.correct ? 'text-green-600' : 'text-option-a')}>
-                  {entry.selectedIndex === -1 ? '—' : `${ICONS[entry.selectedIndex]} ${entry.correct ? '✓' : '✗'}`}
+                <td
+                  className={cn(
+                    'px-3 py-2 text-center font-mono',
+                    entry.correct ? 'text-green-600' : 'text-option-a',
+                  )}
+                >
+                  {entry.selectedIndex === -1
+                    ? '—'
+                    : `${ICONS[entry.selectedIndex]} ${entry.correct ? '✓' : '✗'}`}
                 </td>
               )}
             </tr>

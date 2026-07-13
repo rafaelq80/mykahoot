@@ -5,6 +5,11 @@ export interface GameEstadoEvent {
   playerCount: number;
   /** Total de perguntas do quiz selecionado — presente a partir do lobby */
   totalQuestions?: number;
+  musicEnabled?: boolean;
+}
+
+export interface GameMusicaEvent {
+  enabled: boolean;
 }
 
 export interface GamePerguntaEvent {
@@ -59,6 +64,9 @@ export interface AdminEstadoEvent {
   status: string;
   players: AdminEstadoPlayer[];
   currentQuestionIndex: number;
+  timerRemaining?: number;
+  answeredCount?: number;
+  musicEnabled?: boolean;
 }
 
 export interface AdminPlacarEntry {

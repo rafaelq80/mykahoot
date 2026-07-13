@@ -22,6 +22,7 @@ export class GameStateService {
     questionStartedAt: null,
     questionTimer: null,
     players: new Map<string, PlayerState>(),
+    musicEnabled: false,
   };
 
   /** Readonly snapshot of the current game state */
@@ -48,6 +49,14 @@ export class GameStateService {
       clearTimeout(this._state.questionTimer);
       this._state.questionTimer = null;
     }
+  }
+
+  setMusicEnabled(enabled: boolean): void {
+    this._state.musicEnabled = enabled;
+  }
+
+  getMusicEnabled(): boolean {
+    return this._state.musicEnabled;
   }
 
   // ─── Room management ──────────────────────────────────────────────────────
@@ -261,6 +270,7 @@ export class GameStateService {
     this._state.questionStartedAt = null;
     this._state.questionTimer = null;
     this._state.players = new Map<string, PlayerState>();
+    this._state.musicEnabled = false;
     this.logger.log('Estado do jogo resetado para inativo.');
   }
 }

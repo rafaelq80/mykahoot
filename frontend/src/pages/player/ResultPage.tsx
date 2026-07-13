@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useGameStore } from '../../stores/useGameStore';
+import { playSting } from '../../features/background-music/hooks/useBackgroundMusic';
 import { QuestionResultView } from '../../features/ranking/components/QuestionResultView';
 import { ProgressBar } from '../../components/shared/ProgressBar';
 import { AvatarBadge } from '../../components/shared/AvatarBadge';
@@ -11,6 +13,13 @@ export default function ResultPage() {
   const questionNumber = useGameStore((s) => s.questionNumber);
   const totalQuestions = useGameStore((s) => s.totalQuestions);
   const currentScore = useGameStore((s) => s.currentScore);
+  const questionResult = useGameStore((s) => s.questionResult);
+
+  useEffect(() => {
+    if (questionResult) {
+      playSting(questionResult.you.correct, useGameStore.getState().musicEnabledByAdmin);
+    }
+  }, [questionResult]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">

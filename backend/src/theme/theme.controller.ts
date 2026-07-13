@@ -8,7 +8,9 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../admin/jwt.guard.js';
 import { CreateThemeDto } from './dto/create-theme.dto.js';
 import { UpdateThemeDto } from './dto/update-theme.dto.js';
 import { ThemeService } from './theme.service.js';
@@ -23,16 +25,19 @@ export class ThemeController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@Body() dto: CreateThemeDto) {
     return this.themeService.create(dto);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @Body() dto: UpdateThemeDto) {
     return this.themeService.update(id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     return this.themeService.remove(id);

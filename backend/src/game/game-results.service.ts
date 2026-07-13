@@ -8,11 +8,12 @@ export class GameResultsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit(): Promise<void> {
-    // Find any sessions left in em_andamento state (from a previous crash)
-    const interrompidas = await this.prisma.gameSession.updateMany({
-      where: { status: 'em_andamento' },
-      data: { status: 'interrompida' },
-    });
+    const interrompidas = await this.prisma.withRetry(() =>
+      this.prisma.gameSession.updateMany({
+        where: { status: 'em_andamento' },
+        data: { status: 'interrompida' },
+      }),
+    );
     if (interrompidas.count > 0) {
       this.logger.warn(
         `${interrompidas.count} sessão(ões) em_andamento encontradas ao iniciar — marcadas como interrompidas.`,

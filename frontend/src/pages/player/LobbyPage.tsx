@@ -1,10 +1,12 @@
 import { useGameStore } from '../../stores/useGameStore';
+import { PlayerVolumeControl } from '../../features/background-music/components/PlayerVolumeControl';
 
 const APP_NAME = 'QuizMaster Live';
 
 export default function LobbyPage() {
   const playerCount = useGameStore((s) => s.playerCount);
   const playerInfo = useGameStore((s) => s.playerInfo);
+  const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
   // Se houver uma variável no seu store para o nome do Quiz, substitua o texto estático abaixo por ela
   const quizName = "Super Quiz de TI"; 
 
@@ -20,12 +22,18 @@ export default function LobbyPage() {
         </div>
 
         {/* Status de Conexão no canto superior direito */}
-        <div className="flex items-center gap-2 rounded-full bg-quiz-highlight px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-quiz-highlight-foreground shadow-sm">
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-quiz-highlight-foreground animate-pulse motion-reduce:animate-none"
-            aria-hidden="true"
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full bg-quiz-highlight px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-quiz-highlight-foreground shadow-sm">
+            <span
+              className="inline-block h-2 w-2 rounded-full bg-quiz-highlight-foreground animate-pulse motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Conectado
+          </div>
+          <PlayerVolumeControl
+            musicEnabledByAdmin={musicEnabledByAdmin}
+            buttonClassName="text-white hover:bg-white/10"
           />
-          Conectado
         </div>
       </header>
 

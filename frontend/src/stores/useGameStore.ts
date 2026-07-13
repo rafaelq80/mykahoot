@@ -14,6 +14,13 @@ export type GameScreen =
   | 'question_result'
   | 'final_ranking';
 
+export type GameRoomStatus =
+  | 'inativo'
+  | 'lobby'
+  | 'pergunta_ativa'
+  | 'mostrando_resultado'
+  | string;
+
 export interface PlayerInfo {
   nickname: string;
   avatar: string;
@@ -40,6 +47,8 @@ export interface FinalResult {
 
 interface GameState {
   screen: GameScreen;
+  gameStatus: GameRoomStatus;
+  joinPending: boolean;
   playerCount: number;
   playerInfo: PlayerInfo | null;
   question: QuestionData | null;
@@ -65,12 +74,15 @@ interface GameState {
    *  ranking, negativo = caiu, null = ainda não há posição anterior pra
    *  comparar (ex: primeira pergunta do jogo). */
   lastPositionChange: number | null;
+  musicEnabledByAdmin: boolean;
 
   // Actions
   setScreen: (screen: GameScreen) => void;
+  setJoinPending: (pending: boolean) => void;
   setPlayerInfo: (info: PlayerInfo | null) => void;
   setTimer: (t: number) => void;
   setErrorMessage: (msg: string | null) => void;
+  setMusicEnabledByAdmin: (enabled: boolean) => void;
   handleEstado: (data: GameEstadoEvent) => void;
   handlePergunta: (data: GamePerguntaEvent) => void;
   handleResultado: (data: GameResultadoPerguntaEvent) => void;
@@ -81,6 +93,8 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   screen: 'connecting',
+  gameStatus: 'inativo',
+  joinPending: false,
   playerCount: 0,
   playerInfo: null,
   question: null,
@@ -96,30 +110,44 @@ export const useGameStore = create<GameState>((set, get) => ({
   currentPosition: null,
   lastPointsGained: 0,
   lastPositionChange: null,
+  musicEnabledByAdmin: false,
 
   setScreen: (screen) => set({ screen }),
+  setJoinPending: (joinPending) => set({ joinPending }),
   setPlayerInfo: (info) => set({ playerInfo: info }),
   setTimer: (t) => set({ timer: t }),
   setErrorMessage: (msg) => set({ errorMessage: msg }),
+  setMusicEnabledByAdmin: (enabled) => set({ musicEnabledByAdmin: enabled }),
 
   handleEstado: (data) => {
     const { playerInfo } = get();
     set({
+      gameStatus: data.status,
       playerCount: data.playerCount,
       errorMessage: null,
       ...(data.totalQuestions != null ? { totalQuestions: data.totalQuestions } : {}),
+      ...(data.musicEnabled !== undefined
+        ? { musicEnabledByAdmin: data.musicEnabled }
+        : {}),
     });
 
     if (data.status === 'lobby') {
       set((s) => {
+        if (s.joinPending && playerInfo) {
+          return { screen: 'lobby', joinPending: false };
+        }
         if (s.screen === 'entry' || s.screen === 'connecting') {
           return { screen: playerInfo ? 'lobby' : 'entry' };
         }
         return {};
       });
+    } else if (data.status === 'finalizado') {
+      // Mantém jogadores no pódio — reset só quando admin encerra a sala
+      set((s) => (s.finalResult ? { screen: 'final_ranking' as const } : {}));
     } else if (data.status === 'inativo') {
       set({
         screen: 'entry',
+        joinPending: false,
         playerInfo: null,
         question: null,
         questionNumber: 0,
@@ -130,6 +158,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         currentPosition: null,
         lastPointsGained: 0,
         lastPositionChange: null,
+        musicEnabledByAdmin: false,
       });
     }
   },
@@ -191,6 +220,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   reset: () =>
     set({
       screen: 'connecting',
+      gameStatus: 'inativo',
+      joinPending: false,
       playerCount: 0,
       playerInfo: null,
       question: null,
@@ -206,5 +237,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentPosition: null,
       lastPointsGained: 0,
       lastPositionChange: null,
+      musicEnabledByAdmin: false,
     }),
 }));

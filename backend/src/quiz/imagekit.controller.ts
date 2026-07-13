@@ -1,6 +1,7 @@
-import { Controller, Get, HttpStatus, Logger, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Logger, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ImageKit } from '@imagekit/nodejs';
+import { JwtAuthGuard } from '../admin/jwt.guard.js';
 
 @Controller('imagekit')
 export class ImageKitController {
@@ -23,6 +24,7 @@ export class ImageKitController {
   }
 
   @Get('auth')
+  @UseGuards(JwtAuthGuard)
   getAuthParams(@Res() res: Response) {
     if (!this.imagekit) {
       this.logger.error('ImageKit is not configured — missing environment variables');

@@ -24,7 +24,7 @@ export class QuizService {
     });
   }
 
-  async findOneQuiz(id: string) {
+  async findOneQuiz(id: string, includeAnswers = false) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id },
       include: {
@@ -34,6 +34,12 @@ export class QuizService {
     });
     if (!quiz) {
       throw new NotFoundException(`Quiz with id "${id}" not found`);
+    }
+    if (!includeAnswers) {
+      return {
+        ...quiz,
+        questions: quiz.questions.map(({ correctIndex: _c, ...q }) => q),
+      };
     }
     return quiz;
   }
@@ -68,13 +74,15 @@ export class QuizService {
 
   // ── Questions ─────────────────────────────────────────────────────────────
 
-  async findAllQuestions(quizId: string) {
-    await this.findOneQuiz(quizId);
+  async findAllQuestions(quizId: string, includeAnswers = false) {
+    await this.findOneQuiz(quizId, true);
     this.logger.log(`Finding all questions for quiz: ${quizId}`);
-    return this.prisma.question.findMany({
+    const questions = await this.prisma.question.findMany({
       where: { quizId },
       orderBy: { order: 'asc' },
     });
+    if (includeAnswers) return questions;
+    return questions.map(({ correctIndex: _c, ...q }) => q);
   }
 
   async createQuestion(quizId: string, dto: CreateQuestionDto) {

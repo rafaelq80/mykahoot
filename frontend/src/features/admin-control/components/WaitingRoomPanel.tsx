@@ -1,14 +1,13 @@
 import { useAdminStore } from '../../../stores/useAdminStore';
 import { cn } from '../../../lib/utils';
+import { AdminScreenLayout } from './AdminScreenLayout';
 
 interface Props {
   quizzes: { id: string; title: string; theme: { name: string }; _count: { questions: number } }[];
   selectedQuizId: string;
   onSelectQuiz: (id: string) => void;
   onAbrirSala: () => void;
-  /** Called when professor clicks "Iniciar Jogo" */
   onLiberarPergunta: () => void;
-  /** Called when professor clicks "Finalizar Jogo" — closes the room */
   onFinalizarSala: () => void;
   roomOpen: boolean;
 }
@@ -25,99 +24,133 @@ export function WaitingRoomPanel({
   const players = useAdminStore((s) => s.players);
   const errorMessage = useAdminStore((s) => s.errorMessage);
 
-  /* ─────────────────────────────────────────────────
-   * STATE A — room not open yet: quiz selector
-   * ───────────────────────────────────────────────── */
   if (!roomOpen) {
     return (
-      <div className="relative flex min-h-[calc(100dvh-52px)] flex-col bg-brand bg-dot-pattern">
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12">
-          <div className="text-center">
-            <h1 className="font-black text-4xl text-white">Abrir Sala</h1>
-            <p className="mt-2 text-white/60 font-medium">Selecione o quiz e abra a sala para os jogadores</p>
-          </div>
-
+      <AdminScreenLayout
+        title="Abrir Sala"
+        subtitle="Selecione o quiz e abra a sala para os jogadores entrarem"
+        footer={
+          <button
+            type="button"
+            disabled={!selectedQuizId}
+            onClick={onAbrirSala}
+            className={cn(
+              'w-full rounded-xl py-4 font-black text-lg tracking-wide transition-all active:scale-95 motion-reduce:transition-none sm:max-w-md sm:ml-auto',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+              selectedQuizId
+                ? 'cursor-pointer bg-brand text-white shadow-lg hover:bg-brand/90'
+                : 'cursor-not-allowed bg-gray-200 text-gray-400',
+            )}
+          >
+            ABRIR SALA
+          </button>
+        }
+      >
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-10 sm:px-8">
           {errorMessage && (
-            <div role="alert" className="w-full max-w-md rounded-xl bg-option-a px-4 py-3 text-sm font-bold text-white text-center">
+            <div
+              role="alert"
+              className="w-full max-w-md rounded-xl bg-option-a px-4 py-3 text-center text-sm font-bold text-white"
+            >
               {errorMessage}
             </div>
           )}
 
-          <div className="w-full max-w-md flex flex-col gap-3">
+          <div className="w-full max-w-md rounded-2xl border-2 border-white/20 bg-white p-6 shadow-xl">
+            <label
+              htmlFor="quiz-select"
+              className="mb-2 block font-bold uppercase text-label-xs tracking-[0.14em] text-gray-400"
+            >
+              Quiz da partida
+            </label>
             <select
+              id="quiz-select"
               value={selectedQuizId}
               onChange={(e) => onSelectQuiz(e.target.value)}
-              className="w-full rounded-xl border-2 border-white/20 bg-white/10 px-4 py-3 font-bold text-white focus:border-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-colors"
+              className="w-full rounded-xl border-2 border-surface-container bg-surface-container px-4 py-3 font-bold text-brand focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
-              <option value="" className="text-gray-800 bg-white">-- Escolha um quiz --</option>
+              <option value="">-- Escolha um quiz --</option>
               {quizzes.map((q) => (
-                <option key={q.id} value={q.id} className="text-gray-800 bg-white">
+                <option key={q.id} value={q.id}>
                   {q.title} ({q.theme.name}) — {q._count.questions} perguntas
                 </option>
               ))}
             </select>
-
-            <button
-              type="button"
-              disabled={!selectedQuizId}
-              onClick={onAbrirSala}
-              className={cn(
-                'w-full rounded-xl py-4 font-black text-lg tracking-wide transition-all active:scale-95 motion-reduce:transition-none',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
-                selectedQuizId
-                  ? 'bg-white text-brand hover:opacity-90 shadow-xl cursor-pointer'
-                  : 'bg-white/20 text-white/40 cursor-not-allowed',
-              )}
-            >
-              ABRIR SALA
-            </button>
           </div>
         </div>
-      </div>
+      </AdminScreenLayout>
     );
   }
 
-  /* ─────────────────────────────────────────────────
-   * STATE B — room open: player grid + start button
-   * ───────────────────────────────────────────────── */
   return (
-    <div className="relative flex min-h-[calc(100dvh-52px)] flex-col bg-brand bg-dot-pattern">
-      {/* Main scrollable area */}
-      <div className="relative z-10 flex flex-1 flex-col px-6 pt-8 pb-4 gap-6">
-
-        {/* Header */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <h1 className="font-black text-white leading-tight text-4xl">
-            Aguardando jogadores...
-          </h1>
-          <div
-            className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-white"
-          >
-            <span className="h-2 w-2 rounded-full bg-white animate-pulse motion-reduce:animate-none" aria-hidden="true" />
-            SESSÃO AO VIVO
+    <AdminScreenLayout
+      title="Sala de Espera"
+      badge="Ao vivo"
+      subtitle="Aguardando jogadores entrarem na sala"
+      headerRight={
+        <span className="flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-brand">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brand motion-reduce:animate-none" />
+          Conectado
+        </span>
+      }
+      footer={
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col leading-tight">
+            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+              Jogadores conectados
+            </span>
+            <span className="font-black text-4xl tabular-nums text-brand">{players.length}</span>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Encerrar a sala? Os jogadores serão desconectados.')) {
+                  onFinalizarSala();
+                }
+              }}
+              className="rounded-xl border-2 border-option-a bg-white px-6 py-3.5 font-black text-base tracking-wide text-option-a transition-all hover:bg-option-a/5 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-option-a focus-visible:ring-offset-2"
+            >
+              FINALIZAR SALA
+            </button>
+            <button
+              type="button"
+              onClick={onLiberarPergunta}
+              disabled={players.length === 0}
+              className={cn(
+                'rounded-xl px-8 py-3.5 font-black text-base tracking-wide text-white transition-all active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                players.length > 0
+                  ? 'cursor-pointer bg-brand shadow-lg hover:bg-brand/90'
+                  : 'cursor-not-allowed bg-gray-300 text-gray-500',
+              )}
+            >
+              INICIAR JOGO ›
+            </button>
           </div>
         </div>
-
-        {/* Player grid */}
+      }
+    >
+      <div className="flex flex-1 flex-col px-5 py-8 sm:px-8">
         {players.length === 0 ? (
-          <p className="text-center text-white/40 font-medium mt-4">
-            Nenhum jogador entrou ainda...
-          </p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="rounded-2xl border-2 border-white/20 bg-white/10 px-8 py-6 text-center font-medium text-white/70">
+              Nenhum jogador entrou ainda…
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {players.map((p) => (
               <div
                 key={p.socketId}
-                className="flex flex-col items-center gap-2 rounded-2xl bg-white/10 p-4 animate-[slideUp_0.3s_ease_both]"
+                className="flex flex-col items-center gap-2 rounded-2xl border-2 border-white/20 bg-white p-4 shadow-md animate-[slideUp_0.3s_ease_both]"
               >
-                {/* Avatar circle */}
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-4xl shadow-lg"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container text-4xl"
                   aria-hidden="true"
                 >
                   {p.avatar}
                 </div>
-                <p className="font-bold text-white text-sm text-center leading-tight w-full truncate">
+                <p className="w-full truncate text-center text-sm font-bold leading-tight text-brand">
                   {p.nickname}
                 </p>
               </div>
@@ -125,52 +158,6 @@ export function WaitingRoomPanel({
           </div>
         )}
       </div>
-
-      {/* Rodapé branco — diferencia da tela de players (rodapé roxo) */}
-      <div className="relative z-10 flex items-center justify-between bg-white px-6 py-4 mt-auto shadow-[0_-4px_16px_rgba(0,0,0,0.12)]">
-        <div className="flex flex-col leading-tight">
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
-            JOGADORES
-          </span>
-          <span className="font-black text-4xl text-brand tabular-nums">
-            {players.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('Encerrar a sala? Os jogadores serão desconectados.')) {
-                onFinalizarSala();
-              }
-            }}
-            className={cn(
-              'rounded-xl border-2 border-option-a px-6 py-3.5 font-black text-base tracking-wide text-option-a',
-              'transition-all active:scale-95 motion-reduce:transition-none hover:bg-option-a/10',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-option-a focus-visible:ring-offset-2 cursor-pointer',
-            )}
-          >
-            FINALIZAR JOGO
-          </button>
-
-          <button
-            type="button"
-            onClick={onLiberarPergunta}
-            disabled={players.length === 0}
-            className={cn(
-              'rounded-xl px-8 py-3.5 font-black text-base tracking-wide text-white',
-              'transition-all active:scale-95 motion-reduce:transition-none',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-              players.length > 0
-                ? 'bg-brand hover:opacity-90 shadow-xl cursor-pointer'
-                : 'bg-gray-300 cursor-not-allowed',
-            )}
-          >
-            INICIAR JOGO ›
-          </button>
-        </div>
-      </div>
-    </div>
+    </AdminScreenLayout>
   );
 }

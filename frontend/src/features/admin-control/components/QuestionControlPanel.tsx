@@ -1,11 +1,14 @@
 import { cn } from '../../../lib/utils';
 import { useAdminStore } from '../../../stores/useAdminStore';
-
-const ICONS = ['▲', '◆', '●', '■'] as const;
+import {
+  AdminQuestionDisplay,
+  computeVoteCounts,
+} from './AdminQuestionDisplay';
 
 interface Question {
   id: string;
   text: string;
+  imageUrl: string | null;
   options: string[];
   timeLimitSec: number;
   order: number;
@@ -13,18 +16,14 @@ interface Question {
 
 interface Props {
   questions: Question[];
-  onLiberarPergunta: () => void;
   onProximaPergunta: () => void;
-  /** unused in active game but kept for interface consistency */
-  quizzes: unknown[];
-  selectedQuizId: string;
-  onSelectQuiz: (id: string) => void;
-  onAbrirSala: () => void;
+  onEncerrarJogo: () => void;
 }
 
 export function QuestionControlPanel({
   questions,
   onProximaPergunta,
+  onEncerrarJogo,
 }: Props) {
   const screen = useAdminStore((s) => s.screen);
   const timer = useAdminStore((s) => s.timer);
@@ -32,112 +31,86 @@ export function QuestionControlPanel({
   const players = useAdminStore((s) => s.players);
   const currentQuestionIndex = useAdminStore((s) => s.currentQuestionIndex);
   const correctIndex = useAdminStore((s) => s.correctIndex);
+  const ranking = useAdminStore((s) => s.ranking);
   const errorMessage = useAdminStore((s) => s.errorMessage);
 
   const currentQ = questions[currentQuestionIndex] ?? null;
   const isLastQuestion = currentQuestionIndex >= questions.length - 1;
   const isTimerUrgent = timer > 0 && timer <= 5;
+  const voteCounts = computeVoteCounts(ranking);
+
+  if (!currentQ) return null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-5">
       {errorMessage && (
         <div role="alert" className="rounded-xl bg-option-a px-4 py-3 text-sm font-bold text-white">
           {errorMessage}
         </div>
       )}
 
-      {/* ── Question active ── */}
-      {screen === 'question_active' && currentQ && (
-        <>
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard
-              label="Tempo"
-              value={`${timer}s`}
-              urgent={isTimerUrgent}
-            />
-            <StatCard
-              label="Responderam"
-              value={`${answeredCount} / ${players.length}`}
-            />
-            <StatCard
-              label="Pergunta"
-              value={`${currentQuestionIndex + 1} / ${questions.length}`}
-            />
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Tempo" value={screen === 'question_active' ? `${timer}s` : '—'} urgent={isTimerUrgent} />
+        <StatCard label="Responderam" value={`${answeredCount} / ${players.length}`} />
+        <StatCard label="Pergunta" value={`${currentQuestionIndex + 1} / ${questions.length}`} />
+        {screen === 'showing_result' && correctIndex !== null && (
+          <StatCard label="Sem resposta" value={String(players.length - answeredCount)} />
+        )}
+      </div>
 
-          {/* Question card */}
-          <div className="rounded-2xl border-2 border-surface-container bg-surface-container p-5">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
-              Pergunta {currentQuestionIndex + 1} de {questions.length}
+      {/* Pergunta — visual igual ao aluno */}
+      <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-white/15 bg-white/5 px-4 py-8 sm:px-8">
+        {screen === 'question_active' && (
+          <>
+            <AdminQuestionDisplay
+              text={currentQ.text}
+              imageUrl={currentQ.imageUrl}
+              options={currentQ.options}
+              mode="preview"
+            />
+            <p className="mt-6 rounded-full border-2 border-white/30 bg-white/10 px-6 py-2 text-sm font-bold uppercase tracking-widest text-white/80">
+              Aguardando respostas dos jogadores…
             </p>
-            <p className="font-bold text-lg text-gray-800 leading-snug">{currentQ.text}</p>
-          </div>
+          </>
+        )}
 
-          <button
-            type="button"
-            disabled
-            className="w-full rounded-xl bg-gray-100 py-4 font-bold text-gray-400 cursor-not-allowed border-2 border-gray-200"
-          >
-            Aguardando respostas...
-          </button>
-        </>
-      )}
-
-      {/* ── Showing result ── */}
-      {screen === 'showing_result' && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              label="Pergunta"
-              value={`${currentQuestionIndex + 1} / ${questions.length}`}
+        {screen === 'showing_result' && (
+          <>
+            <p className="mb-4 text-center text-label-xs font-bold uppercase tracking-[0.14em] text-white/70">
+              Resultado da pergunta — votos por alternativa
+            </p>
+            <AdminQuestionDisplay
+              text={currentQ.text}
+              imageUrl={currentQ.imageUrl}
+              options={currentQ.options}
+              mode="result"
+              correctIndex={correctIndex}
+              voteCounts={voteCounts}
             />
-            {correctIndex !== null && currentQ && (
-              <StatCard
-                label="Resposta certa"
-                value={`${ICONS[correctIndex]} ${currentQ.options[correctIndex] ?? ''}`}
-                small
-              />
-            )}
-          </div>
+          </>
+        )}
+      </div>
 
+      {/* Ações — sempre visíveis com contraste no fundo roxo */}
+      {screen === 'showing_result' && (
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             onClick={onProximaPergunta}
-            className="w-full rounded-xl bg-brand py-4 font-black text-white text-base tracking-wide active:scale-95 transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 shadow-md"
+            className="flex-1 rounded-xl bg-white py-4 text-base font-black tracking-wide text-brand shadow-lg transition-all hover:bg-surface-container active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
           >
             {isLastQuestion ? 'ENCERRAR JOGO ›' : 'PRÓXIMA PERGUNTA ›'}
           </button>
-
-          {/* Always show explicit "Encerrar" button */}
           {!isLastQuestion && (
             <button
               type="button"
-              onClick={onProximaPergunta}
-              className="w-full rounded-xl border-2 border-option-a py-3 font-bold text-option-a text-sm active:scale-95 transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-option-a focus-visible:ring-offset-2"
+              onClick={onEncerrarJogo}
+              className="rounded-xl border-2 border-white bg-transparent px-6 py-4 text-sm font-bold text-white transition-all hover:bg-white/10 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
             >
               Encerrar jogo agora
             </button>
           )}
-        </>
-      )}
-
-      {/* ── Game over ── */}
-      {screen === 'game_over' && (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-2xl bg-surface-container border-2 border-white/40 px-5 py-4 text-center">
-            <p className="font-black text-2xl text-brand">🏆 Partida encerrada!</p>
-            <p className="text-sm text-gray-500 mt-1 font-medium">
-              Veja o ranking completo abaixo
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="w-full rounded-xl bg-brand py-4 font-black text-white text-base tracking-wide active:scale-95 transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 shadow-md"
-          >
-            NOVA PARTIDA
-          </button>
         </div>
       )}
     </div>
@@ -148,20 +121,20 @@ interface StatCardProps {
   label: string;
   value: string;
   urgent?: boolean;
-  small?: boolean;
 }
 
-function StatCard({ label, value, urgent, small }: StatCardProps) {
+function StatCard({ label, value, urgent }: StatCardProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-surface-container bg-surface-container px-3 py-4 text-center gap-1">
-      <span className={cn(
-        'font-black tabular-nums leading-none',
-        small ? 'text-base' : 'text-3xl',
-        urgent ? 'text-option-a' : 'text-brand',
-      )}>
+    <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-white/20 bg-white px-3 py-4 text-center shadow-sm">
+      <span
+        className={cn(
+          'font-black tabular-nums leading-none text-2xl sm:text-3xl',
+          urgent ? 'text-option-a' : 'text-brand',
+        )}
+      >
         {value}
       </span>
-      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
+      <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-gray-400">
         {label}
       </span>
     </div>
