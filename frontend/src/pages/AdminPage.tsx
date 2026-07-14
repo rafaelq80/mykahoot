@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import { AdminQuizzesPage } from './AdminQuizzesPage';
+import { AdminTurmasPage } from './AdminTurmasPage';
 import { AdminHistoricoPage } from './AdminHistoricoPage';
 import { useAdminSocket } from '../features/admin-control/hooks/useAdminSocket';
 import { useBackgroundMusic } from '../features/background-music/hooks/useBackgroundMusic';
@@ -11,7 +12,7 @@ import type { AdminScreen } from '../stores/useAdminStore';
 import type { MusicPhase } from '../features/background-music/constants';
 import { cn } from '../lib/utils';
 
-type Tab = 'dashboard' | 'quizzes' | 'historico';
+type Tab = 'dashboard' | 'quizzes' | 'turmas' | 'historico';
 
 function musicPhaseForAdminScreen(screen: AdminScreen): MusicPhase {
   switch (screen) {
@@ -54,6 +55,7 @@ export function AdminPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'dashboard', label: 'Partida' },
     { id: 'quizzes', label: 'Quizzes' },
+    { id: 'turmas', label: 'Turmas' },
     { id: 'historico', label: 'Histórico' },
   ];
 
@@ -93,6 +95,7 @@ export function AdminPage() {
       <div className="flex flex-1 flex-col overflow-auto">
         {tab === 'dashboard' && <AdminDashboardPage token={token} onLogout={handleLogout} />}
         {tab === 'quizzes' && <AdminQuizzesPage token={token} />}
+        {tab === 'turmas' && <AdminTurmasPage token={token} />}
         {tab === 'historico' && <AdminHistoricoPage token={token} />}
       </div>
 

@@ -141,7 +141,7 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
               'flex items-center gap-2 rounded-full px-4 py-2 font-extrabold tabular-nums shadow-sm',
               isTimerUrgent
                 ? 'animate-pulse bg-option-a text-white motion-reduce:animate-none'
-                : 'bg-brand text-white',
+                : 'bg-white/15 text-white',
             )}
           >
             <span className="text-lg">{timer}s</span>

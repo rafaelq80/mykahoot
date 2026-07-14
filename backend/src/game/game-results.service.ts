@@ -23,10 +23,12 @@ export class GameResultsService implements OnModuleInit {
 
   async finalizarSessao(gameSessionId: string): Promise<void> {
     try {
-      await this.prisma.gameSession.update({
-        where: { id: gameSessionId },
-        data: { status: 'finalizado' },
-      });
+      await this.prisma.withRetry(() =>
+        this.prisma.gameSession.update({
+          where: { id: gameSessionId },
+          data: { status: 'finalizado' },
+        }),
+      );
       this.logger.log(`GameSession ${gameSessionId} finalizada.`);
     } catch (err) {
       this.logger.error(`Erro ao finalizar GameSession ${gameSessionId}`, err);

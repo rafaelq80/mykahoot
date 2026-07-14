@@ -11,7 +11,14 @@ interface AdminScreenLayoutProps {
   className?: string;
 }
 
-/** Layout padrão das telas do professor: cabeçalho branco, fundo roxo, rodapé branco */
+/**
+ * Layout padrão das telas do professor: fundo roxo, rodapé branco.
+ *
+ * O cabeçalho branco já existe uma única vez, fixo em `AdminPage` (marca +
+ * abas + sair). Este layout NÃO renderiza uma segunda barra de cabeçalho —
+ * título/badge/subtitle/headerRight aparecem como um heading dentro do
+ * próprio corpo roxo, evitando duas barras brancas empilhadas.
+ */
 export function AdminScreenLayout({
   title,
   subtitle,
@@ -22,26 +29,29 @@ export function AdminScreenLayout({
   className,
 }: AdminScreenLayoutProps) {
   return (
-    <div className={cn('flex min-h-[calc(100dvh-52px)] flex-1 flex-col bg-brand', className)}>
-      <header className="flex shrink-0 items-center justify-between border-b border-surface-container bg-white px-5 py-4 shadow-sm sm:px-6">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate font-black text-xl text-brand sm:text-2xl">{title}</h1>
-            {badge && (
-              <span className="shrink-0 rounded-full bg-surface-container px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-brand">
-                {badge}
-              </span>
-            )}
-          </div>
-          {subtitle && (
-            <p className="text-body-sm font-medium text-gray-500">{subtitle}</p>
-          )}
-        </div>
-        {headerRight && <div className="ml-4 shrink-0">{headerRight}</div>}
-      </header>
-
+    <div className={cn('flex min-h-full flex-1 flex-col bg-brand', className)}>
       <main className="relative flex flex-1 flex-col overflow-auto bg-brand bg-dot-pattern">
-        <div className="relative z-10 flex flex-1 flex-col">{children}</div>
+        <div className="relative z-10 flex flex-1 flex-col">
+          {/* Heading da tela — parte do corpo roxo, não uma barra própria */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-6 pb-2 sm:px-8">
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate font-black text-xl text-white sm:text-2xl">{title}</h1>
+                {badge && (
+                  <span className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-white">
+                    {badge}
+                  </span>
+                )}
+              </div>
+              {subtitle && (
+                <p className="text-body-sm font-medium text-white/70">{subtitle}</p>
+              )}
+            </div>
+            {headerRight && <div className="ml-4 shrink-0">{headerRight}</div>}
+          </div>
+
+          {children}
+        </div>
       </main>
 
       {footer && (

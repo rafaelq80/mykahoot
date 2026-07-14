@@ -62,4 +62,21 @@ model PlayerResult {
   avatar        String
   score         Int
   answers       Json        // [{questionId, selectedIndex, correct, timeMs, pointsEarned}]
+  turmaId       String?
+  turma         Turma?      @relation(fields: [turmaId], references: [id])
+}
+
+model Turma {
+  id         String         @id @default(uuid())
+  nome       String
+  createdAt  DateTime       @default(now())
+  alunos     Aluno[]
+  resultados PlayerResult[]
+}
+
+model Aluno {
+  id      String @id @default(uuid())
+  turmaId String
+  turma   Turma  @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  nome    String
 }

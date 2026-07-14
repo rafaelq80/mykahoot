@@ -39,6 +39,7 @@ interface AdminConectarPayload {
 interface EntrarPayload {
   nickname: string;
   avatar: string;
+  turmaId: string;
 }
 
 interface ResponderPayload {
@@ -370,7 +371,7 @@ export class GameGateway
         return;
       }
 
-      const { nickname, avatar } = payload;
+      const { nickname, avatar, turmaId } = payload;
 
       if (!nickname?.trim() || nickname.trim().length > 20) {
         client.emit('game:erro', {
@@ -384,6 +385,19 @@ export class GameGateway
         return;
       }
 
+      if (!turmaId?.trim()) {
+        client.emit('game:erro', { message: 'Selecione sua turma.' });
+        return;
+      }
+
+      const turma = await this.prisma.withRetry(() =>
+        this.prisma.turma.findUnique({ where: { id: turmaId } }),
+      );
+      if (!turma) {
+        client.emit('game:erro', { message: 'Turma não encontrada.' });
+        return;
+      }
+
       // Persist PlayerResult in Neon immediately
       const playerResult = await this.prisma.withRetry(() =>
         this.prisma.playerResult.create({
@@ -391,6 +405,7 @@ export class GameGateway
             gameSessionId: state.gameSessionId!,
             nickname: nickname.trim(),
             avatar: avatar.trim(),
+            turmaId,
             score: 0,
             answers: [],
           },

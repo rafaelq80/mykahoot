@@ -88,8 +88,8 @@ export function WaitingRoomPanel({
       badge="Ao vivo"
       subtitle="Aguardando jogadores entrarem na sala"
       headerRight={
-        <span className="flex items-center gap-2 rounded-full bg-brand/10 px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-brand">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brand motion-reduce:animate-none" />
+        <span className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-white">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" />
           Conectado
         </span>
       }

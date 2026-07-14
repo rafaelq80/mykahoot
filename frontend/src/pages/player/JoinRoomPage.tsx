@@ -27,11 +27,11 @@ export default function JoinRoomPage() {
 
   const roomOpen = gameStatus === 'lobby';
 
-  const handleJoin = (nickname: string, avatar: string) => {
+  const handleJoin = (nickname: string, avatar: string, turmaId: string) => {
     if (!roomOpen) return;
     setPlayerInfo({ nickname, avatar });
     setJoinPending(true);
-    getSocket().emit('player:entrar', { nickname, avatar });
+    getSocket().emit('player:entrar', { nickname, avatar, turmaId });
   };
 
   return (
