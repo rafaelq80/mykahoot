@@ -6,7 +6,7 @@ import { ProgressBar } from '../../components/shared/ProgressBar';
 import { AvatarBadge } from '../../components/shared/AvatarBadge';
 import { ScorePill } from '../../components/shared/ScorePill';
 
-const APP_NAME = 'QuizMaster Live';
+const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 
 export default function ResultPage() {
   const playerInfo = useGameStore((s) => s.playerInfo);
@@ -22,10 +22,10 @@ export default function ResultPage() {
   }, [questionResult]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
+    <div className="flex h-dvh flex-col overflow-hidden bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Top bar — mesmo padrão do QuestionPage, sem a bolinha de tempo
           (aqui não há timer ativo, então o indicador foi removido) */}
-      <header className="flex items-center justify-between px-4 pt-4 sm:px-6">
+      <header className="flex items-center justify-between px-4 pt-3 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
           <span className="rounded-full bg-quiz-surface-strong px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-white/90">
@@ -35,26 +35,29 @@ export default function ResultPage() {
       </header>
 
       {/* Barra de progresso fina */}
-      <div className="px-4 pt-3 sm:px-6">
+      <div className="px-4 pt-2 sm:px-6">
         <ProgressBar current={questionNumber} total={totalQuestions} />
       </div>
 
       {/* Conteúdo do resultado — acerto ou erro, com os cards de pontuação
           ganha e posição logo abaixo da mensagem central */}
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-6">
+      <main className="flex flex-1 min-h-0 flex-col items-center justify-center overflow-hidden px-4 py-3">
         <QuestionResultView />
       </main>
 
-      {/* Rodapé — apenas jogador + pontuação TOTAL acumulada (sem ranking) */}
+      {/* Rodapé — jogador à esquerda, aguardando no centro, pontuação total à direita */}
       {playerInfo && (
-        <footer className="flex items-center justify-between border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
-          <div className="flex flex-col">
-             <AvatarBadge avatar={playerInfo.avatar} nickname={playerInfo.nickname} />
+        <footer className="grid grid-cols-3 items-center border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
+          <div className="flex flex-col items-start">
+            <AvatarBadge avatar={playerInfo.avatar} nickname={playerInfo.nickname} />
           </div>
+
+          <div className="flex items-center justify-center gap-2 text-white/50">
+            <SpinnerIcon />
+            <span className="text-sm">Aguardando próxima pergunta...</span>
+          </div>
+
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">
-              Pontuação
-            </span>
             <span className="rounded-full bg-quiz-highlight px-3 py-1 font-extrabold text-quiz-highlight-foreground shadow-sm">
               <ScorePill score={currentScore} />
             </span>
@@ -62,5 +65,23 @@ export default function ResultPage() {
         </footer>
       )}
     </div>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      className="animate-spin motion-reduce:animate-none"
+      aria-hidden="true"
+    >
+      <path d="M12 3a9 9 0 1 0 9 9" />
+    </svg>
   );
 }

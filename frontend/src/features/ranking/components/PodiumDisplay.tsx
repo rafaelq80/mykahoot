@@ -12,7 +12,6 @@ interface PodiumDisplayProps {
   playerInfo?: { nickname: string; avatar: string } | null;
   playerCount?: number;
   headerBadge?: string;
-  appName?: string;
 }
 
 export function PodiumDisplay({
@@ -20,7 +19,6 @@ export function PodiumDisplay({
   you,
   playerInfo,
   playerCount,
-  appName = 'QuizMaster Live',
 }: PodiumDisplayProps) {
   const isSelf = (nickname: string, avatar: string) =>
     playerInfo?.nickname === nickname && playerInfo?.avatar === avatar;
@@ -32,18 +30,11 @@ export function PodiumDisplay({
 
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col">
-      <header className="flex w-full items-center justify-between border-b border-quiz-border bg-quiz-surface px-4 py-4 sm:px-6">
-        <span className="font-extrabold text-lg sm:text-xl">{appName}</span>
-      </header>
-
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 py-8">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 min-h-0 flex-col items-center justify-center gap-8 px-4 py-8 overflow-hidden">
         <div className="text-center">
           <h2 className="text-4xl font-black uppercase tracking-wider text-white md:text-5xl">
             Resultados Finais
           </h2>
-          <p className="mt-1 text-sm font-bold uppercase tracking-widest text-white/60 md:text-base">
-            Os campeões surgiram!
-          </p>
         </div>
 
         <div className="mt-4 flex h-72 w-full items-end justify-center gap-3 sm:gap-6">
@@ -59,7 +50,7 @@ export function PodiumDisplay({
                 {second.score.toLocaleString('pt-BR')} pts
               </p>
               <div className="flex h-24 w-full items-center justify-center rounded-t-2xl border-t border-white/20 bg-slate-400/80 shadow-lg">
-                <span className="font-mono text-4xl font-black text-white/20">2</span>
+                <span className="font-mono text-4xl font-black text-white drop-shadow-sm">2</span>
               </div>
             </div>
           ) : (
@@ -78,7 +69,7 @@ export function PodiumDisplay({
                 {first.score.toLocaleString('pt-BR')} pts
               </p>
               <div className="flex h-36 w-full items-center justify-center rounded-t-2xl border-t-4 border-yellow-300 bg-amber-500 shadow-2xl">
-                <span className="font-mono text-5xl font-black text-white/30">1</span>
+                <span className="font-mono text-5xl font-black text-white drop-shadow-sm">1</span>
               </div>
             </div>
           ) : (
@@ -97,7 +88,7 @@ export function PodiumDisplay({
                 {third.score.toLocaleString('pt-BR')} pts
               </p>
               <div className="flex h-18 w-full items-center justify-center rounded-t-2xl border-t border-white/10 bg-orange-600/90 shadow-lg">
-                <span className="font-mono text-3xl font-black text-white/20">3</span>
+                <span className="font-mono text-3xl font-black text-white drop-shadow-sm">3</span>
               </div>
             </div>
           ) : (
@@ -136,7 +127,7 @@ export function PodiumDisplay({
           </div>
         )}
 
-        {you && playerCount != null && (
+        {you && you.position > 5 && playerCount != null && (
           <p className="rounded-xl border border-quiz-border bg-quiz-surface-strong/60 px-6 py-3 text-center text-body-sm shadow-md">
             Posição final:{' '}
             <span className="ml-1 text-lg font-black">{you.position}º de {playerCount}</span>

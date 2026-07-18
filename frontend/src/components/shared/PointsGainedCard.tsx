@@ -8,7 +8,7 @@ interface PointsGainedCardProps {
   className?: string;
 }
 
-export function PointsGainedCard({ pointsGained, correct, className }: PointsGainedCardProps) {
+export function PointsGainedCard({ pointsGained, className }: PointsGainedCardProps) {
   return (
     <div
       className={cn(
@@ -22,30 +22,6 @@ export function PointsGainedCard({ pointsGained, correct, className }: PointsGai
       <span className="font-serif font-black text-3xl text-white tabular-nums sm:text-4xl">
         +{pointsGained.toLocaleString()}
       </span>
-      <span className="flex items-center gap-1.5 text-sm font-semibold text-quiz-card-muted">
-        <StarIcon />
-        {correct ? 'Resposta certa' : 'Sem pontos dessa vez'}
-      </span>
     </div>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9.25" />
-      <path d="M12 7.3l1.28 2.66 2.86.42-2.07 2.05.49 2.87L12 13.85l-2.56 1.45.49-2.87-2.07-2.05 2.86-.42z" />
-    </svg>
   );
 }

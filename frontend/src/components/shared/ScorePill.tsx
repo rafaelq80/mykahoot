@@ -13,7 +13,7 @@ export function ScorePill({ score, className }: ScorePillProps) {
         className,
       )}
     >
-      {score.toLocaleString()} pts
+      {score.toLocaleString()} pontos
     </span>
   );
 }

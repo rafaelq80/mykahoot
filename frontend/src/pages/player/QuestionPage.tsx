@@ -5,7 +5,7 @@ import { useCountdown } from '../../hooks/useCountdown';
 import { AvatarBadge } from '../../components/shared/AvatarBadge';
 import { ScorePill } from '../../components/shared/ScorePill';
 
-const APP_NAME = 'QuizMaster Live';
+const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 
 export default function QuestionPage() {
   useCountdown();
@@ -21,9 +21,9 @@ export default function QuestionPage() {
   const isTimeRunningOut = timer > 0 && timer <= 5;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
+    <div className="flex h-dvh flex-col overflow-hidden bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Top bar: marca + contador de pergunta + timer */}
-      <header className="flex items-center justify-between px-4 pt-4 sm:px-6">
+      <header className="flex items-center justify-between px-4 pt-3 sm:px-6">
         <div className="flex items-center gap-3">
           <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
           <span className="rounded-full bg-quiz-surface-strong px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-white/90">
@@ -42,12 +42,12 @@ export default function QuestionPage() {
       </header>
 
       {/* Barra de progresso fina */}
-      <div className="px-4 pt-3 sm:px-6">
+      <div className="px-4 pt-2 sm:px-6">
         <ProgressBar current={questionNumber} total={totalQuestions} />
       </div>
 
-      {/* Conteúdo da pergunta — centralizado */}
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-6">
+      {/* Conteúdo da pergunta — centralizado, ocupa o espaço disponível */}
+      <main className="flex flex-1 min-h-0 flex-col items-center justify-center overflow-hidden px-4 py-3">
         <QuestionView />
       </main>
 
@@ -64,7 +64,7 @@ export default function QuestionPage() {
           <div className="flex flex-col items-center text-center">
             {currentPosition != null ? (
               <span className="text-title-sm font-black text-white bg-quiz-surface-strong px-4 py-1 rounded-full border border-quiz-border shadow-sm">
-                {formatOrdinal(currentPosition)}
+                {`${formatOrdinal(currentPosition)} lugar`}
               </span>
             ) : (
               <span className="text-body-md font-bold text-white/50">-</span>

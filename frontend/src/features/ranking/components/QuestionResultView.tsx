@@ -38,11 +38,6 @@ export function QuestionResultView() {
         <p className="font-serif font-black text-4xl text-white sm:text-5xl">
           {correct ? 'ACERTOU!' : 'ERROU!'}
         </p>
-        {correct && (
-          <p className="font-serif font-bold text-lg text-option-d">
-            Você está mandando bem!
-          </p>
-        )}
       </div>
 
       {/* Retângulos: pontos ganhos nesta rodada + posição no ranking
@@ -51,12 +46,6 @@ export function QuestionResultView() {
       <div className="flex w-full gap-3">
         <PointsGainedCard pointsGained={correct ? lastPointsGained : 0} correct={correct} />
         <PositionCard position={you.position} positionChange={lastPositionChange} />
-      </div>
-
-      {/* Aguardando próxima pergunta */}
-      <div className="flex items-center gap-2 text-white/50">
-        <SpinnerIcon />
-        <span className="text-sm">Aguardando próxima pergunta...</span>
       </div>
     </div>
   );
@@ -96,24 +85,6 @@ function CrossIcon() {
       aria-hidden="true"
     >
       <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      className="animate-spin motion-reduce:animate-none"
-      aria-hidden="true"
-    >
-      <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
   );
 }

@@ -24,26 +24,30 @@ export function QuestionView() {
   };
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6 animate-[slideUp_0.35s_ease_both]">
-      {/* Texto da pergunta — direto no fundo escuro, sem card */}
-      <h2 className="text-center font-extrabold text-2xl leading-snug text-white sm:text-3xl">
-        {question.text}
-      </h2>
+    <div className="flex h-full w-full max-w-5xl min-h-0 flex-1 flex-col gap-3 sm:gap-4 animate-[slideUp_0.35s_ease_both]">
+      {/* Texto da pergunta — card branco, altura fixa */}
+      <div className="shrink-0 rounded-2xl bg-white px-6 py-3.5 shadow-lg sm:px-8 sm:py-4">
+        <h2 className="text-center font-extrabold text-lg leading-snug text-quiz-bg-to sm:text-xl">
+          {question.text}
+        </h2>
+      </div>
 
-      {/* Imagem da pergunta, ou moldura padrão quando não há imagem */}
-      {question.imageUrl ? (
-        <img
-          src={question.imageUrl}
-          alt="Imagem da pergunta"
-          className="mx-auto aspect-4/3 w-full max-w-sm rounded-xl border border-quiz-border object-cover shadow-md"
-        />
-      ) : (
-        <DefaultQuestionImage />
-      )}
+      {/* Imagem — ocupa o espaço vertical restante entre pergunta e alternativas */}
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        {question.imageUrl ? (
+          <img
+            src={question.imageUrl}
+            alt="Imagem da pergunta"
+            className="h-full max-h-full w-auto max-w-full rounded-xl border border-quiz-border object-contain shadow-md"
+          />
+        ) : (
+          <DefaultQuestionImage />
+        )}
+      </div>
 
-      {/* Alternativas — grid 1 col mobile, 2 cols sm+ */}
+      {/* Alternativas — grid 1 col mobile, 2 cols sm+, largas e com altura fixa maior */}
       <div
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        className="grid shrink-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3"
         role="group"
         aria-label="Alternativas"
       >
@@ -69,7 +73,7 @@ export function QuestionView() {
 function DefaultQuestionImage() {
   return (
     <div
-      className="mx-auto flex aspect-4/3 w-full max-w-sm items-center justify-center rounded-xl border border-quiz-border bg-quiz-surface p-6"
+      className="flex h-full max-h-full w-auto aspect-4/3 items-center justify-center rounded-xl border border-quiz-border bg-quiz-surface p-6"
       role="img"
       aria-label="Pergunta sem imagem"
     >

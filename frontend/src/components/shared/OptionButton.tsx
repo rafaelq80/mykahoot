@@ -32,9 +32,9 @@ export function OptionButton({
     <button
       type="button"
       className={cn(
-        // Base layout — tall enough for comfortable tapping
-        'flex min-h-[80px] w-full items-center gap-4 rounded-xl px-5 py-4',
-        'text-left font-bold text-lg text-white',
+        // Base layout — um pouco maior que o original, sem dominar o espaço vertical
+        'flex min-h-18 w-full items-center gap-3 rounded-xl px-5 py-3.5 sm:min-h-21 sm:gap-4 sm:px-6',
+        'text-left font-bold text-base text-white sm:text-lg',
         'transition-all active:scale-95 motion-reduce:transition-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
         // Color per option
@@ -52,10 +52,10 @@ export function OptionButton({
       aria-disabled={disabled}
       onClick={onClick}
     >
-      <span className="text-2xl shrink-0 leading-none" aria-hidden="true">
+      <span className="text-xl shrink-0 leading-none sm:text-2xl" aria-hidden="true">
         {isCorrect ? '✓' : ICONS[index]}
       </span>
-      <span className="leading-snug">{text}</span>
+      <span className="line-clamp-2 leading-snug">{text}</span>
     </button>
   );
 }
