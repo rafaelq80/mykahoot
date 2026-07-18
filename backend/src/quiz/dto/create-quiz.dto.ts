@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateQuizDto {
   @IsString()
@@ -8,4 +8,8 @@ export class CreateQuizDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }

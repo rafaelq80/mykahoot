@@ -12,13 +12,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { JwtAuthGuard } from '../admin/jwt.guard.js';
-import { OptionalJwtAuthGuard } from '../admin/optional-jwt.guard.js';
-import { QuizService } from './quiz.service.js';
-import { CreateQuizDto } from './dto/create-quiz.dto.js';
-import { UpdateQuizDto } from './dto/update-quiz.dto.js';
-import { CreateQuestionDto } from './dto/create-question.dto.js';
-import { UpdateQuestionDto } from './dto/update-question.dto.js';
+import { JwtAuthGuard } from '../admin/jwt.guard';
+import { OptionalJwtAuthGuard } from '../admin/optional-jwt.guard';
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { CreateQuizDto } from './dto/create-quiz.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
+import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { QuizService } from './quiz.service';
+
 
 interface AuthRequest extends Request {
   user?: { role: string };
@@ -73,10 +74,7 @@ export class QuizController {
 
   @Post(':id/questions')
   @UseGuards(JwtAuthGuard)
-  createQuestion(
-    @Param('id') quizId: string,
-    @Body() dto: CreateQuestionDto,
-  ) {
+  createQuestion(@Param('id') quizId: string, @Body() dto: CreateQuestionDto) {
     return this.quizService.createQuestion(quizId, dto);
   }
 

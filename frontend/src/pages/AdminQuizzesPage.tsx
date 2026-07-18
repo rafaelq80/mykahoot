@@ -48,9 +48,39 @@ export function AdminQuizzesPage({ token }: { token: string }) {
 
   const showFeedback = (msg: string) => { setFeedback(msg); setTimeout(() => setFeedback(null), 3000); };
 
-  const loadThemes = useCallback(async () => { const r = await fetch(`${API_URL}/themes`, { headers: h }); setThemes((await r.json()) as Theme[]); }, []);
-  const loadQuizzes = useCallback(async () => { const r = await fetch(`${API_URL}/quizzes`, { headers: h }); setQuizzes((await r.json()) as Quiz[]); }, []);
-  const loadQuestions = useCallback(async (id: string) => { const r = await fetch(`${API_URL}/quizzes/${id}/questions`, { headers: h }); setQuestions([...(await r.json() as Question[])].sort((a, b) => a.order - b.order)); }, []);
+  const loadThemes = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/themes`, { headers: h });
+      if (!r.ok) throw new Error(`GET /themes falhou com status ${r.status}`);
+      const d = (await r.json()) as Theme[];
+      setThemes(Array.isArray(d) ? d : []);
+    } catch (err) {
+      console.error(err);
+      setThemes([]);
+    }
+  }, []);
+  const loadQuizzes = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/quizzes`, { headers: h });
+      if (!r.ok) throw new Error(`GET /quizzes falhou com status ${r.status}`);
+      const d = (await r.json()) as Quiz[];
+      setQuizzes(Array.isArray(d) ? d : []);
+    } catch (err) {
+      console.error(err);
+      setQuizzes([]);
+    }
+  }, []);
+  const loadQuestions = useCallback(async (id: string) => {
+    try {
+      const r = await fetch(`${API_URL}/quizzes/${id}/questions`, { headers: h });
+      if (!r.ok) throw new Error(`GET /quizzes/${id}/questions falhou com status ${r.status}`);
+      const d = (await r.json()) as Question[];
+      setQuestions(Array.isArray(d) ? [...d].sort((a, b) => a.order - b.order) : []);
+    } catch (err) {
+      console.error(err);
+      setQuestions([]);
+    }
+  }, []);
 
   useEffect(() => { void loadThemes(); void loadQuizzes(); }, []);
   useEffect(() => { if (selectedQuizId) void loadQuestions(selectedQuizId); }, [selectedQuizId]);
@@ -132,7 +162,7 @@ export function AdminQuizzesPage({ token }: { token: string }) {
               <li key={q.id}
                 className={cn('flex items-center justify-between rounded-lg border p-3 text-sm cursor-pointer transition-colors', selectedQuizId === q.id ? 'border-brand bg-brand/5' : 'border-surface-container hover:bg-surface-container')}
                 onClick={() => setSelectedQuizId(q.id)}>
-                <div><strong>{q.title}</strong><span className="ml-1 text-gray-400">— {q.theme.name} ({q._count.questions})</span></div>
+                <div><strong>{q.title}</strong><span className="ml-1 text-gray-400">— {q.theme?.name ?? 'Sem tema'} ({q._count?.questions ?? 0})</span></div>
                 <button type="button" className={deleteBtnCls} onClick={(e) => { e.stopPropagation(); void deleteQuiz(q.id); }}>✕</button>
               </li>
             ))}

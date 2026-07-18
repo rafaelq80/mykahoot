@@ -1,32 +1,30 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../admin/jwt.guard.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { JwtAuthGuard } from '../admin/jwt.guard';
+import { GameSession } from './entities/game-session.entity';
+
 
 @Controller('game/sessions')
 @UseGuards(JwtAuthGuard)
 export class GameSessionsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(GameSession)
+    private readonly gameSessionRepository: Repository<GameSession>,
+  ) {}
 
   @Get()
-  async findAll() {
-    return this.prisma.gameSession.findMany({
-      orderBy: { playedAt: 'desc' },
-      include: {
-        quiz: {
-          select: {
-            title: true,
-            theme: { select: { name: true } },
-          },
-        },
-        results: {
-          select: {
-            id: true,
-            nickname: true,
-            avatar: true,
-            score: true,
-          },
-          orderBy: { score: 'desc' },
-        },
+  async findAll(): Promise<GameSession[]> {
+    return this.gameSessionRepository.find({
+      order: { playedAt: 'DESC', results: { score: 'DESC' } },
+      relations: { quiz: { theme: true }, results: true },
+      select: {
+        id: true,
+        status: true,
+        playedAt: true,
+        quizId: true,
+        quiz: { title: true, theme: { name: true } },
+        results: { id: true, nickname: true, avatar: true, score: true },
       },
     });
   }

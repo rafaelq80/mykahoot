@@ -1,19 +1,20 @@
 export type GameStatus =
-  | 'inativo'
-  | 'lobby'
-  | 'pergunta_ativa'
-  | 'mostrando_resultado'
-  | 'finalizado';
+  'inativo' | 'lobby' | 'pergunta_ativa' | 'mostrando_resultado' | 'finalizado';
 
 export interface PlayerState {
   socketId: string;
   /** id do PlayerResult já criado no Neon para este jogador */
   playerResultId: string;
+  /** id do Aluno (roster) que entrou nesta sessão — sempre presente após a validação de turma */
+  alunoId: string;
   nickname: string;
   avatar: string;
   score: number;
   /** questionId → resposta registrada */
-  answers: Map<string, { selectedIndex: number; timeMs: number; correct: boolean }>;
+  answers: Map<
+    string,
+    { selectedIndex: number; timeMs: number; correct: boolean }
+  >;
 }
 
 export interface GameState {
@@ -32,7 +33,7 @@ export interface GameState {
   musicEnabled: boolean;
 }
 
-/** Subconjunto de Question (Prisma) necessário para cálculo de resultado */
+/** Subconjunto de Question (entidade TypeORM) necessário para cálculo de resultado */
 export interface QuestionShape {
   id: string;
   correctIndex: number;

@@ -6,6 +6,10 @@ export interface GameEstadoEvent {
   /** Total de perguntas do quiz selecionado — presente a partir do lobby */
   totalQuestions?: number;
   musicEnabled?: boolean;
+  /** Título do quiz selecionado — null quando não há sala aberta */
+  quizTitle?: string | null;
+  /** Imagem do quiz selecionado — null quando não há sala aberta ou o quiz não tem imagem */
+  quizImageUrl?: string | null;
 }
 
 export interface GameMusicaEvent {

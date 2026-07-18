@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AdminModule } from '../admin/admin.module.js';
-import { PrismaModule } from '../prisma/prisma.module.js';
-import { TurmaController } from './turma.controller.js';
-import { TurmaService } from './turma.service.js';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminModule } from '../admin/admin.module';
+import { Turma } from './entities/turma.entity';
+import { TurmaController } from './turma.controller';
+import { TurmaService } from './turma.service';
 
 @Module({
-  imports: [PrismaModule, AdminModule],
+  imports: [TypeOrmModule.forFeature([Turma]), AdminModule],
   controllers: [TurmaController],
   providers: [TurmaService],
   exports: [TurmaService],

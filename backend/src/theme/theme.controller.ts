@@ -10,10 +10,11 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../admin/jwt.guard.js';
-import { CreateThemeDto } from './dto/create-theme.dto.js';
-import { UpdateThemeDto } from './dto/update-theme.dto.js';
-import { ThemeService } from './theme.service.js';
+import { JwtAuthGuard } from '../admin/jwt.guard';
+import { CreateThemeDto } from './dto/create-theme.dto';
+import { UpdateThemeDto } from './dto/update-theme.dto';
+import { ThemeService } from './theme.service';
+
 
 @Controller('themes')
 export class ThemeController {

@@ -49,10 +49,7 @@ export default function ResultPage() {
       {playerInfo && (
         <footer className="flex items-center justify-between border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
           <div className="flex flex-col">
-            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">
-              Jogador
-            </span>
-            <AvatarBadge avatar={playerInfo.avatar} nickname={playerInfo.nickname} />
+             <AvatarBadge avatar={playerInfo.avatar} nickname={playerInfo.nickname} />
           </div>
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted">

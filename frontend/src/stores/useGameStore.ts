@@ -75,6 +75,10 @@ interface GameState {
    *  comparar (ex: primeira pergunta do jogo). */
   lastPositionChange: number | null;
   musicEnabledByAdmin: boolean;
+  /** Título e imagem do quiz atual — vêm do game:estado quando a sala está
+   *  aberta; permanecem nulos antes disso (ex: tela inicial "entry"). */
+  quizTitle: string | null;
+  quizImageUrl: string | null;
 
   // Actions
   setScreen: (screen: GameScreen) => void;
@@ -111,6 +115,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   lastPointsGained: 0,
   lastPositionChange: null,
   musicEnabledByAdmin: false,
+  quizTitle: null,
+  quizImageUrl: null,
 
   setScreen: (screen) => set({ screen }),
   setJoinPending: (joinPending) => set({ joinPending }),
@@ -129,6 +135,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       ...(data.musicEnabled !== undefined
         ? { musicEnabledByAdmin: data.musicEnabled }
         : {}),
+      ...(data.quizTitle !== undefined ? { quizTitle: data.quizTitle } : {}),
+      ...(data.quizImageUrl !== undefined ? { quizImageUrl: data.quizImageUrl } : {}),
     });
 
     if (data.status === 'lobby') {
@@ -159,6 +167,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         lastPointsGained: 0,
         lastPositionChange: null,
         musicEnabledByAdmin: false,
+        quizTitle: null,
+        quizImageUrl: null,
       });
     }
   },
@@ -238,5 +248,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       lastPointsGained: 0,
       lastPositionChange: null,
       musicEnabledByAdmin: false,
+      quizTitle: null,
+      quizImageUrl: null,
     }),
 }));

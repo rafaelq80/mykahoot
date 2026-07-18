@@ -1,11 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import {
-  GameState,
-  GameStatus,
-  PlayerState,
-  QuestionShape,
-  RankingEntry,
-} from './game.types.js';
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import { GameState, GameStatus, PlayerState, QuestionShape, RankingEntry } from './game.types';
+
 
 const BASE_POINTS = 1000;
 const MIN_CORRECT_POINTS = 500;
@@ -86,6 +86,7 @@ export class GameStateService {
    */
   adicionarJogador(
     socketId: string,
+    alunoId: string,
     nickname: string,
     avatar: string,
     playerResultId: string,
@@ -96,9 +97,19 @@ export class GameStateService {
       );
     }
 
+    const jaConectado = [...this._state.players.values()].some(
+      (p) => p.alunoId === alunoId,
+    );
+    if (jaConectado) {
+      throw new ConflictException(
+        'Este aluno já está conectado nesta partida.',
+      );
+    }
+
     const player: PlayerState = {
       socketId,
       playerResultId,
+      alunoId,
       nickname,
       avatar,
       score: 0,
@@ -122,7 +133,9 @@ export class GameStateService {
   ): boolean {
     const player = this._state.players.get(socketId);
     if (!player) {
-      this.logger.warn(`registrarResposta: jogador não encontrado (${socketId})`);
+      this.logger.warn(
+        `registrarResposta: jogador não encontrado (${socketId})`,
+      );
       return false;
     }
 
@@ -201,7 +214,10 @@ export class GameStateService {
       const clampedTimeMs = Math.min(answer.timeMs, timeLimitMs);
       const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
       const pointsEarned = isCorrect
-        ? Math.round(MIN_CORRECT_POINTS + (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio)
+        ? Math.round(
+            MIN_CORRECT_POINTS +
+              (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio,
+          )
         : 0;
 
       player.score += pointsEarned;
@@ -211,24 +227,29 @@ export class GameStateService {
     }
 
     // Build and return ranking sorted by score descending
-    const ranking: RankingEntry[] = [...this._state.players.values()].map((player) => {
-      const answer = player.answers.get(questionId)!;
-      const clampedTimeMs = Math.min(answer.timeMs, timeLimitMs);
-      const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
-      const pointsEarned = answer.correct
-        ? Math.round(MIN_CORRECT_POINTS + (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio)
-        : 0;
+    const ranking: RankingEntry[] = [...this._state.players.values()].map(
+      (player) => {
+        const answer = player.answers.get(questionId)!;
+        const clampedTimeMs = Math.min(answer.timeMs, timeLimitMs);
+        const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
+        const pointsEarned = answer.correct
+          ? Math.round(
+              MIN_CORRECT_POINTS +
+                (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio,
+            )
+          : 0;
 
-      return {
-        socketId: player.socketId,
-        nickname: player.nickname,
-        avatar: player.avatar,
-        score: player.score,
-        correct: answer.correct,
-        selectedIndex: answer.selectedIndex,
-        pointsEarned,
-      };
-    });
+        return {
+          socketId: player.socketId,
+          nickname: player.nickname,
+          avatar: player.avatar,
+          score: player.score,
+          correct: answer.correct,
+          selectedIndex: answer.selectedIndex,
+          pointsEarned,
+        };
+      },
+    );
 
     ranking.sort((a, b) => b.score - a.score);
     return ranking;

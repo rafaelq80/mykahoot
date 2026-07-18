@@ -1,14 +1,14 @@
 import { useGameStore } from '../../stores/useGameStore';
 import { PlayerVolumeControl } from '../../features/background-music/components/PlayerVolumeControl';
 
-const APP_NAME = 'QuizMaster Live';
+const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 
 export default function LobbyPage() {
   const playerCount = useGameStore((s) => s.playerCount);
   const playerInfo = useGameStore((s) => s.playerInfo);
   const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
-  // Se houver uma variável no seu store para o nome do Quiz, substitua o texto estático abaixo por ela
-  const quizName = "Super Quiz de TI"; 
+  const quizTitle = useGameStore((s) => s.quizTitle);
+  const quizImageUrl = useGameStore((s) => s.quizImageUrl);
 
   return (
     <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
@@ -16,20 +16,10 @@ export default function LobbyPage() {
       <header className="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-quiz-border bg-quiz-surface">
         <div className="flex items-center gap-3">
           <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
-          <span className="rounded-full bg-quiz-surface-strong px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-white/90">
-            Sala de Espera
-          </span>
         </div>
 
         {/* Status de Conexão no canto superior direito */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full bg-quiz-highlight px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-quiz-highlight-foreground shadow-sm">
-            <span
-              className="inline-block h-2 w-2 rounded-full bg-quiz-highlight-foreground animate-pulse motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-            Conectado
-          </div>
           <PlayerVolumeControl
             musicEnabledByAdmin={musicEnabledByAdmin}
             buttonClassName="text-white hover:bg-white/10"
@@ -70,8 +60,8 @@ export default function LobbyPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl bg-quiz-surface-strong/30 border border-quiz-border px-6 py-3 text-center shadow-inner animate-pulse">
-          <p className="text-body-sm font-medium text-quiz-text-muted">
+        <div className="animate-pulse rounded-full bg-yellow-400 px-6 py-2.5 shadow-md">
+          <p className="text-body-sm font-extrabold text-black">
             Aguardando o professor iniciar a partida...
           </p>
         </div>
@@ -82,9 +72,17 @@ export default function LobbyPage() {
         {/* Lado Esquerdo: Nome do Quiz + Ícone temporário */}
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-2 text-white/90 font-bold">
-            <PlaceholderIcon />
+            {quizImageUrl ? (
+              <img
+                src={quizImageUrl}
+                alt=""
+                className="h-5 w-5 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <PlaceholderIcon />
+            )}
             <span className="text-body-md font-extrabold tracking-tight truncate max-w-90 sm:max-w-xs">
-              {quizName}
+              {quizTitle ?? '—'}
             </span>
           </div>
         </div>

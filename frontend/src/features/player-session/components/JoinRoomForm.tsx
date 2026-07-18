@@ -5,43 +5,50 @@ import { useGameStore } from '../../../stores/useGameStore';
 import type { Turma } from '../../../types/turma';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-/** 8 avatares — grid 2×4 conforme manual de design */
-const AVATARS = ['🦊', '🤖', '🦖', '👾', '😸', '🐼', '⚡', '🦉'] as const;
-
-const APP_NAME = 'QuizMaster Live';
+const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 
 interface JoinRoomFormProps {
-  onJoin: (nickname: string, avatar: string, turmaId: string) => void;
+  /** Turma + aluno confirmados — a escolha de avatar acontece na tela seguinte. */
+  onContinue: (alunoId: string, nickname: string, turmaId: string) => void;
   roomOpen: boolean;
-  joinPending: boolean;
   connected: boolean;
   playerCount: number;
   errorMessage?: string | null;
 }
 
 export function JoinRoomForm({
-  onJoin,
+  onContinue,
   roomOpen,
-  joinPending,
   connected,
   playerCount,
   errorMessage,
 }: JoinRoomFormProps) {
   const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
+  const quizTitle = useGameStore((s) => s.quizTitle);
+  const quizImageUrl = useGameStore((s) => s.quizImageUrl);
 
   const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [turmasError, setTurmasError] = useState<string | null>(null);
   const [turmaId, setTurmaId] = useState('');
   const [nickname, setNickname] = useState('');
-  const [avatar, setAvatar] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/turmas`)
-      .then((r) => r.json())
-      .then((data: Turma[]) => setTurmas(data))
-      .catch(() => setTurmas([]));
+      .then((r) => {
+        if (!r.ok) throw new Error(`GET /turmas falhou com status ${r.status}`);
+        return r.json();
+      })
+      .then((data: Turma[]) => {
+        setTurmas(Array.isArray(data) ? data : []);
+        setTurmasError(null);
+      })
+      .catch((err: Error) => {
+        console.error(err);
+        setTurmas([]);
+        setTurmasError('Não foi possível carregar as turmas. Recarregue a página.');
+      });
   }, []);
 
   // Fecha a lista de sugestões ao clicar fora dela
@@ -65,82 +72,74 @@ export function JoinRoomForm({
       .slice(0, 6);
   }, [selectedTurma, nickname]);
 
+  // O nome precisa bater com um aluno cadastrado na turma selecionada —
+  // mesma regra que o servidor aplica antes de deixar entrar na sala.
+  // Evita mandar pro backend um nome que a gente já sabe que vai ser
+  // rejeitado, e deixa claro na hora que "nome" != apelido livre.
+  const matchedAluno = useMemo(() => {
+    if (!selectedTurma) return null;
+    const nomeDigitado = nickname.trim().toLowerCase();
+    if (!nomeDigitado) return null;
+    return (
+      selectedTurma.alunos.find((a) => a.nome.toLowerCase() === nomeDigitado) ?? null
+    );
+  }, [selectedTurma, nickname]);
+
   const handleTurmaChange = (id: string) => {
     setTurmaId(id);
     setNickname('');
     setShowSuggestions(false);
   };
 
-  const canSubmit =
-    roomOpen &&
-    !joinPending &&
-    connected &&
-    turmaId !== '' &&
-    nickname.trim().length > 0 &&
-    avatar !== null;
+  const canContinue = roomOpen && connected && turmaId !== '' && matchedAluno !== null;
 
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) return;
-    onJoin(nickname.trim(), avatar!, turmaId);
-  }, [nickname, avatar, turmaId, canSubmit, onJoin]);
+  const handleContinue = useCallback(() => {
+    if (!canContinue || !matchedAluno) return;
+    onContinue(matchedAluno.id, matchedAluno.nome, turmaId);
+  }, [matchedAluno, turmaId, canContinue, onContinue]);
 
-  const fieldsDisabled = !roomOpen || joinPending;
+  const fieldsDisabled = !roomOpen;
+  const showNameNotFoundHint =
+    !matchedAluno && selectedTurma !== null && nickname.trim().length > 2 && suggestions.length === 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
+    <div className="flex h-dvh flex-col overflow-hidden bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Header — mesmo padrão do LobbyPage */}
-      <header className="flex items-center justify-between border-b border-quiz-border bg-quiz-surface px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
-          <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
-          <span className="rounded-full bg-quiz-surface-strong px-3 py-1 text-label-xs font-bold uppercase tracking-[0.14em] text-white/90">
-            Entrar na Sala
-          </span>
-        </div>
+      <header className="flex items-center justify-between border-b border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
+        <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
 
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              'flex items-center gap-2 rounded-full px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] shadow-sm',
-              connected
-                ? 'bg-quiz-highlight text-quiz-highlight-foreground'
-                : 'bg-quiz-surface-strong text-white/70',
-            )}
-          >
-            <span
-              className={cn(
-                'inline-block h-2 w-2 rounded-full',
-                connected
-                  ? 'bg-quiz-highlight-foreground animate-pulse motion-reduce:animate-none'
-                  : 'bg-white/40',
-              )}
-              aria-hidden="true"
-            />
-            {connected ? 'Conectado' : 'Conectando…'}
-          </div>
-          <PlayerVolumeControl
-            musicEnabledByAdmin={musicEnabledByAdmin}
-            buttonClassName="text-white hover:bg-white/10"
-          />
-        </div>
+        <PlayerVolumeControl
+          musicEnabledByAdmin={musicEnabledByAdmin}
+          buttonClassName="text-white hover:bg-white/10"
+        />
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6">
+      <main className="flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6">
         {!roomOpen && (
           <div
             role="status"
-            className="mb-6 w-full max-w-lg rounded-2xl border border-quiz-border bg-quiz-surface-strong/40 px-6 py-4 text-center"
+            className="mb-4 w-full max-w-lg rounded-2xl bg-yellow-400 px-6 py-3 text-center shadow-md"
           >
-            <p className="font-bold text-body-lg text-white">Sala fechada</p>
-            <p className="mt-1 text-body-sm text-quiz-text-muted">
+            <p className="font-bold text-body-lg text-black">Sala fechada</p>
+            <p className="mt-1 text-body-sm text-black/70">
               Aguarde o professor abrir uma nova partida para entrar.
             </p>
+          </div>
+        )}
+
+        {turmasError && (
+          <div
+            role="alert"
+            className="mb-4 w-full max-w-lg rounded-2xl border border-option-a/40 bg-option-a/20 px-6 py-3 text-center text-body-sm font-bold text-white"
+          >
+            {turmasError}
           </div>
         )}
 
         {errorMessage && (
           <div
             role="alert"
-            className="mb-6 w-full max-w-lg rounded-2xl border border-option-a/40 bg-option-a/20 px-6 py-3 text-center text-body-sm font-bold text-white"
+            className="mb-4 w-full max-w-lg rounded-2xl border border-option-a/40 bg-option-a/20 px-6 py-3 text-center text-body-sm font-bold text-white"
           >
             {errorMessage}
           </div>
@@ -149,21 +148,21 @@ export function JoinRoomForm({
         {/* Card central */}
         <div
           className={cn(
-            'flex w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-quiz-border bg-quiz-surface-strong/30 shadow-xl backdrop-blur-sm',
+            'flex w-full max-w-lg min-h-0 flex-col overflow-hidden rounded-4xl border border-quiz-border bg-quiz-surface-strong/30 shadow-xl backdrop-blur-sm',
             'animate-[slideUp_0.35s_ease_both]',
             !roomOpen && 'pointer-events-none opacity-60',
           )}
         >
-          <div className="flex flex-col gap-8 px-6 py-8 sm:gap-10 sm:px-10 sm:py-10">
-            <header className="flex flex-col gap-2 text-center">
+          <div className="flex flex-col gap-5 px-6 py-6 sm:gap-6 sm:px-8 sm:py-8">
+            <header className="flex flex-col gap-1 text-center">
               <h1 className="font-black text-headline-md text-white">Entrar no Jogo</h1>
-              <p className="text-body-lg text-quiz-text-muted">
-                Escolha sua turma, seu nome e um avatar!
+              <p className="text-body-sm text-quiz-text-muted">
+                Escolha sua turma e seu nome pra continuar.
               </p>
             </header>
 
             {/* Turma */}
-            <section className="flex flex-col gap-2.5">
+            <section className="flex flex-col gap-1.5">
               <label
                 htmlFor="turma"
                 className="font-semibold uppercase text-label-xs text-quiz-text-muted"
@@ -176,7 +175,7 @@ export function JoinRoomForm({
                 onChange={(e) => handleTurmaChange(e.target.value)}
                 disabled={fieldsDisabled}
                 className={cn(
-                  'w-full rounded-xl border border-quiz-border bg-quiz-surface px-6 py-3.5 font-bold text-input text-white',
+                  'w-full rounded-xl border border-quiz-border bg-quiz-surface px-6 py-3 font-bold text-input text-white',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-quiz-highlight focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
                   'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                 )}
@@ -189,31 +188,37 @@ export function JoinRoomForm({
             </section>
 
             {/* Nickname com autocomplete a partir dos alunos da turma */}
-            <section className="relative flex flex-col gap-2.5" ref={suggestionsRef}>
+            <section className="relative flex flex-col gap-1.5" ref={suggestionsRef}>
               <label
                 htmlFor="nickname"
                 className="font-semibold uppercase text-label-xs text-quiz-text-muted"
               >
-                Seu Apelido
+                Seu Nome
               </label>
               <input
                 id="nickname"
                 type="text"
                 maxLength={20}
-                placeholder={turmaId ? 'Digite um nome divertido...' : 'Selecione a turma primeiro'}
+                placeholder={turmaId ? 'Digite seu nome...' : 'Selecione a turma primeiro'}
                 value={nickname}
                 onChange={(e) => { setNickname(e.target.value); setShowSuggestions(true); }}
                 onFocus={() => setShowSuggestions(true)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
                 autoComplete="off"
                 disabled={fieldsDisabled || !turmaId}
                 className={cn(
-                  'w-full rounded-xl border border-quiz-border bg-quiz-surface px-6 py-3.5 font-bold text-input text-white',
+                  'w-full rounded-xl border border-quiz-border bg-quiz-surface px-6 py-3 font-bold text-input text-white',
                   'placeholder:font-bold placeholder:text-quiz-text-muted',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-quiz-highlight focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
                   'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                 )}
               />
+
+              {showNameNotFoundHint && (
+                <p className="text-body-sm font-semibold text-option-a">
+                  Nome não encontrado nessa turma. Confira a grafia ou peça ao professor pra te cadastrar.
+                </p>
+              )}
 
               {showSuggestions && suggestions.length > 0 && (
                 <ul className="absolute top-full z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-quiz-border bg-quiz-bg-to shadow-xl">
@@ -232,52 +237,20 @@ export function JoinRoomForm({
               )}
             </section>
 
-            <section className="flex flex-col gap-3">
-              <p className="font-semibold uppercase text-label-xs text-quiz-text-muted">
-                Escolha um Avatar
-              </p>
-              <div className="grid grid-cols-4 gap-4 sm:gap-5">
-                {AVATARS.map((emoji) => {
-                  const selected = avatar === emoji;
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      aria-label={`Avatar ${emoji}`}
-                      aria-pressed={selected}
-                      disabled={fieldsDisabled}
-                      onClick={() => setAvatar(emoji)}
-                      className={cn(
-                        'flex aspect-square w-full items-center justify-center rounded-full bg-surface-container',
-                        'text-[clamp(1.5rem,5vw,2rem)]',
-                        'ring-2 ring-transparent ring-offset-2 ring-offset-transparent',
-                        'transition-all active:scale-90 motion-reduce:transition-none',
-                        'focus-visible:outline-none focus-visible:ring-quiz-highlight',
-                        'disabled:cursor-not-allowed disabled:opacity-50',
-                        selected && 'ring-quiz-highlight scale-[1.03]',
-                      )}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
             <button
               type="button"
-              disabled={!canSubmit}
-              onClick={handleSubmit}
+              disabled={!canContinue}
+              onClick={handleContinue}
               className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-body-lg',
+                'flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold text-body-lg',
                 'transition-colors active:scale-[0.99] motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiz-highlight focus-visible:ring-offset-2',
-                canSubmit
+                canContinue
                   ? 'cursor-pointer bg-quiz-highlight text-quiz-highlight-foreground hover:bg-quiz-highlight/90'
                   : 'cursor-not-allowed bg-quiz-surface text-quiz-text-muted',
               )}
             >
-              {joinPending ? 'Entrando…' : 'Pronto para Jogar!'}
+              Continuar
             </button>
           </div>
         </div>
@@ -286,22 +259,65 @@ export function JoinRoomForm({
       {/* Rodapé — mesmo padrão do LobbyPage */}
       <footer className="grid w-full grid-cols-2 items-center border-t border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
         <div className="flex flex-col items-start">
-          <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
-            Jogadores na sala
-          </span>
-          <span className="text-body-md font-extrabold tracking-tight text-white/90">
-            {playerCount} {playerCount === 1 ? 'conectado' : 'conectados'}
-          </span>
+          {roomOpen && quizTitle ? (
+            <div className="flex items-center gap-2">
+              {quizImageUrl ? (
+                <img
+                  src={quizImageUrl}
+                  alt=""
+                  className="h-5 w-5 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <PlaceholderIcon />
+              )}
+              <span className="text-body-md font-extrabold tracking-tight text-white/90 truncate max-w-40 sm:max-w-xs">
+                {quizTitle}
+              </span>
+            </div>
+          ) : (
+            <>
+              <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
+                Jogadores na sala
+              </span>
+              <span className="text-body-md font-extrabold tracking-tight text-white/90">
+                {playerCount} {playerCount === 1 ? 'conectado' : 'conectados'}
+              </span>
+            </>
+          )}
         </div>
         <div className="flex flex-col items-end text-right">
           <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-text-muted mb-1">
             Status do Jogo
           </span>
           <span className="text-body-sm font-bold text-white/90">
-            {roomOpen ? 'Sala aberta' : 'Aguardando professor'}
+            {roomOpen
+              ? `Sala aberta - ${playerCount} conectado${playerCount === 1 ? '' : 's'}`
+              : 'Aguardando professor'}
           </span>
         </div>
       </footer>
     </div>
+  );
+}
+
+// Ícone temporário do quiz — mesmo padrão do LobbyPage
+function PlaceholderIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-quiz-text-muted shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+      <path d="M6 6h10" />
+      <path d="M6 10h10" />
+    </svg>
   );
 }

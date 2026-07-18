@@ -33,6 +33,7 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
   const [selectedQuizId, setSelectedQuizId] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roomOpen, setRoomOpen] = useState(false);
+  const [quizzesError, setQuizzesError] = useState<string | null>(null);
 
   const screen = useAdminStore((s) => s.screen);
   const currentQuestionIndex = useAdminStore((s) => s.currentQuestionIndex);
@@ -42,9 +43,21 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
 
   useEffect(() => {
     void fetch(`${API_URL}/quizzes`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d: Quiz[]) => setQuizzes(d))
-      .catch(() => null);
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`GET /quizzes falhou com status ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((d: Quiz[]) => {
+        setQuizzes(Array.isArray(d) ? d : []);
+        setQuizzesError(null);
+      })
+      .catch((err: Error) => {
+        console.error(err);
+        setQuizzes([]);
+        setQuizzesError('Não foi possível carregar os quizzes. Tente novamente.');
+      });
   }, [token]);
 
   useEffect(() => {
@@ -55,9 +68,20 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
     void fetch(`${API_URL}/quizzes/${selectedQuizId}/questions`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
-      .then((d: Question[]) => setQuestions([...d].sort((a, b) => a.order - b.order)))
-      .catch(() => setQuestions([]));
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`GET /quizzes/${selectedQuizId}/questions falhou com status ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((d: Question[]) => {
+        const list = Array.isArray(d) ? d : [];
+        setQuestions([...list].sort((a, b) => a.order - b.order));
+      })
+      .catch((err: Error) => {
+        console.error(err);
+        setQuestions([]);
+      });
   }, [selectedQuizId, token]);
 
   useEffect(() => {
@@ -93,15 +117,22 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
 
   if (screen === 'lobby') {
     return (
-      <WaitingRoomPanel
-        quizzes={quizzes}
-        selectedQuizId={selectedQuizId}
-        onSelectQuiz={setSelectedQuizId}
-        onAbrirSala={handleAbrirSala}
-        onLiberarPergunta={handleLiberarPergunta}
-        onFinalizarSala={handleFinalizarSala}
-        roomOpen={roomOpen}
-      />
+      <>
+        {quizzesError && (
+          <div className="mx-5 mt-4 rounded-xl bg-option-a/10 px-4 py-3 text-body-sm font-medium text-option-a sm:mx-8">
+            {quizzesError}
+          </div>
+        )}
+        <WaitingRoomPanel
+          quizzes={quizzes}
+          selectedQuizId={selectedQuizId}
+          onSelectQuiz={setSelectedQuizId}
+          onAbrirSala={handleAbrirSala}
+          onLiberarPergunta={handleLiberarPergunta}
+          onFinalizarSala={handleFinalizarSala}
+          roomOpen={roomOpen}
+        />
+      </>
     );
   }
 

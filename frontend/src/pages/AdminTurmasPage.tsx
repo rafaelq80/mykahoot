@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { cn } from '../lib/utils';
+import type { Turma } from '../types/turma';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-interface Aluno { id: string; nome: string; turmaId: string }
-interface Turma { id: string; nome: string; alunos: Aluno[] }
 
 export function AdminTurmasPage({ token }: { token: string }) {
   const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };

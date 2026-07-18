@@ -9,24 +9,24 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
-import { requireAdminSocket, verifyAdminSocket } from '../admin/ws-admin.helper.js';
-import { GameStateService } from './game-state.service.js';
-import { GameResultsService } from './game-results.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { requireAdminSocket, verifyAdminSocket } from '../admin/ws-admin.helper';
+import { Question } from '../quiz/entities/question.entity';
+import { Quiz } from '../quiz/entities/quiz.entity';
+import { AlunoService } from '../aluno/aluno.service';
+import { EntrarDto } from './dto/entrar.dto';
+import { GameSession } from './entities/game-session.entity';
+import { PlayerResult } from './entities/player-result.entity';
+import { GameResultsService } from './game-results.service';
+import { GameStateService } from './game-state.service';
 
-// ─── Local shape types ────────────────────────────────────────────────────────
 
-interface QuizQuestionShape {
-  id: string;
-  text: string;
-  imageUrl: string | null;
-  options: unknown; // JSON array from Prisma
-  correctIndex: number;
-  timeLimitSec: number;
-  order: number;
-}
+// --- Local shape types ----------------------------------------------------
 
 interface SelecionarTemaPayload {
   quizId: string;
@@ -36,18 +36,12 @@ interface AdminConectarPayload {
   token?: string;
 }
 
-interface EntrarPayload {
-  nickname: string;
-  avatar: string;
-  turmaId: string;
-}
-
 interface ResponderPayload {
   questionId: string;
   selectedIndex: number;
 }
 
-// ─── Gateway ─────────────────────────────────────────────────────────────────
+// --- Gateway ---------------------------------------------------------------
 
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL ?? '*' },
@@ -59,13 +53,25 @@ export class GameGateway
   private readonly logger = new Logger(GameGateway.name);
 
   /** Full question list cached from DB when the room is opened */
-  private questions: QuizQuestionShape[] = [];
+  private questions: Question[] = [];
+  /** Quiz atual (título/imagem) cacheado quando a sala é aberta — usado
+   *  pra popular o lobby do player sem precisar guardar isso no GameState
+   *  compartilhado. */
+  private currentQuiz: Quiz | null = null;
 
   constructor(
     private readonly gameStateService: GameStateService,
     private readonly gameResultsService: GameResultsService,
-    private readonly prisma: PrismaService,
+    private readonly alunoService: AlunoService,
     private readonly jwtService: JwtService,
+    @InjectRepository(Question)
+    private readonly questionRepository: Repository<Question>,
+    @InjectRepository(Quiz)
+    private readonly quizRepository: Repository<Quiz>,
+    @InjectRepository(GameSession)
+    private readonly gameSessionRepository: Repository<GameSession>,
+    @InjectRepository(PlayerResult)
+    private readonly playerResultRepository: Repository<PlayerResult>,
   ) {}
 
   afterInit(): void {
@@ -80,6 +86,8 @@ export class GameGateway
       playerCount: state.players.size,
       totalQuestions: this.questions.length || undefined,
       musicEnabled: state.musicEnabled,
+      quizTitle: this.currentQuiz?.title ?? null,
+      quizImageUrl: this.currentQuiz?.imageUrl ?? null,
     });
   }
 
@@ -88,8 +96,6 @@ export class GameGateway
 
     const state = this.gameStateService.state;
 
-    // If the disconnecting socket belongs to a player, figure out whether they
-    // had already answered the current question before removing them.
     const wasPlayer = state.players.has(client.id);
     let currentQuestionId: string | null = null;
 
@@ -102,20 +108,16 @@ export class GameGateway
 
     this.gameStateService.removerJogador(client.id);
 
-    // Notify everyone about the updated player list
     this._broadcastEstado();
     this._emitAdminEstado();
 
-    // If a question is active and all remaining players have now answered,
-    // trigger the result flow.
     if (wasPlayer && state.status === 'pergunta_ativa' && currentQuestionId) {
       this._checkAllAnswered(currentQuestionId);
     }
   }
 
-  // ─── Professor → Server ──────────────────────────────────────────────────
+  // --- Professor -> Server ---------------------------------------------------
 
-  /** Admin joins the 'admins' room and gets the current game state immediately */
   @SubscribeMessage('admin:conectar')
   async handleAdminConectar(
     @ConnectedSocket() client: Socket,
@@ -138,39 +140,30 @@ export class GameGateway
     try {
       const { quizId } = payload;
 
-      const questions = await this.prisma.withRetry(() =>
-        this.prisma.question.findMany({
-          where: { quizId },
-          orderBy: { order: 'asc' },
-        }),
-      );
+      const questions = await this.questionRepository.find({
+        where: { quizId },
+        order: { order: 'ASC' },
+      });
 
       if (questions.length === 0) {
         client.emit('game:erro', { message: 'Quiz não possui perguntas.' });
         return;
       }
 
-      const session = await this.prisma.withRetry(() =>
-        this.prisma.gameSession.create({
-          data: { quizId, status: 'em_andamento' },
-        }),
-      );
+      this.currentQuiz = await this.quizRepository.findOne({
+        where: { id: quizId },
+      });
 
-      // Cache questions locally
-      this.questions = questions.map((q) => ({
-        id: q.id,
-        text: q.text,
-        imageUrl: q.imageUrl,
-        options: q.options,
-        correctIndex: q.correctIndex,
-        timeLimitSec: q.timeLimitSec,
-        order: q.order,
-      }));
+      const session = this.gameSessionRepository.create({
+        quizId,
+        status: 'em_andamento',
+      });
+      await this.gameSessionRepository.save(session);
 
-      // Open the in-memory room
+      this.questions = questions;
+
       this.gameStateService.abrirSala(quizId, session.id);
 
-      // Join this socket to the admins room
       await client.join('admins');
 
       this._broadcastEstado();
@@ -178,13 +171,14 @@ export class GameGateway
     } catch (err) {
       this.logger.error('admin:selecionarTema error', err);
       client.emit('game:erro', {
-        message: err instanceof Error ? err.message : 'Erro ao selecionar tema.',
+        message:
+          err instanceof Error ? err.message : 'Erro ao selecionar tema.',
       });
     }
   }
 
   @SubscribeMessage('admin:liberarPergunta')
-  async handleLiberarPergunta(@ConnectedSocket() client: Socket): Promise<void> {
+  handleLiberarPergunta(@ConnectedSocket() client: Socket): void {
     if (!requireAdminSocket(client)) return;
 
     try {
@@ -203,18 +197,15 @@ export class GameGateway
         return;
       }
 
-      // Update status and start timer tracking
       this.gameStateService.setStatus('pergunta_ativa');
       this.gameStateService.setQuestionStartedAt(Date.now());
 
-      // Schedule auto-result at end of time limit
       const timer = setTimeout(() => {
         void this._processarResultado();
       }, question.timeLimitSec * 1000);
 
       this.gameStateService.setTimer(timer);
 
-      // Emit to players — NO correctIndex
       this.server.to('players').emit('game:pergunta', {
         questionId: question.id,
         text: question.text,
@@ -229,13 +220,16 @@ export class GameGateway
     } catch (err) {
       this.logger.error('admin:liberarPergunta error', err);
       client.emit('game:erro', {
-        message: err instanceof Error ? err.message : 'Erro ao liberar pergunta.',
+        message:
+          err instanceof Error ? err.message : 'Erro ao liberar pergunta.',
       });
     }
   }
 
   @SubscribeMessage('admin:proximaPergunta')
-  async handleProximaPergunta(@ConnectedSocket() client: Socket): Promise<void> {
+  async handleProximaPergunta(
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
     if (!requireAdminSocket(client)) return;
 
     try {
@@ -248,22 +242,24 @@ export class GameGateway
         return;
       }
 
-      const hasMore = this.gameStateService.avancarPergunta(this.questions.length);
+      const hasMore = this.gameStateService.avancarPergunta(
+        this.questions.length,
+      );
 
       if (hasMore) {
-        await this.handleLiberarPergunta(client);
+        this.handleLiberarPergunta(client);
       } else {
         await this._finalizarJogo();
       }
     } catch (err) {
       this.logger.error('admin:proximaPergunta error', err);
       client.emit('game:erro', {
-        message: err instanceof Error ? err.message : 'Erro ao avançar pergunta.',
+        message:
+          err instanceof Error ? err.message : 'Erro ao avançar pergunta.',
       });
     }
   }
 
-  /** Encerra o jogo imediatamente e exibe o pódio (a partir do resultado atual) */
   @SubscribeMessage('admin:finalizarJogo')
   async handleFinalizarJogo(@ConnectedSocket() client: Socket): Promise<void> {
     if (!requireAdminSocket(client)) return;
@@ -271,7 +267,10 @@ export class GameGateway
     try {
       const state = this.gameStateService.state;
 
-      if (state.status !== 'mostrando_resultado' && state.status !== 'pergunta_ativa') {
+      if (
+        state.status !== 'mostrando_resultado' &&
+        state.status !== 'pergunta_ativa'
+      ) {
         client.emit('game:erro', {
           message: `Não é possível finalizar com status: ${state.status}`,
         });
@@ -291,7 +290,6 @@ export class GameGateway
     }
   }
 
-  /** Professor toggles background music for everyone */
   @SubscribeMessage('admin:musica')
   handleMusica(
     @ConnectedSocket() client: Socket,
@@ -304,7 +302,6 @@ export class GameGateway
     this._emitAdminEstado();
   }
 
-  /** Professor closes room after podium — full reset */
   @SubscribeMessage('admin:encerrarSala')
   async handleEncerrarSala(@ConnectedSocket() client: Socket): Promise<void> {
     if (!requireAdminSocket(client)) return;
@@ -316,28 +313,30 @@ export class GameGateway
         state.status === 'inativo' ||
         (state.status === 'lobby' && !state.gameSessionId)
       ) {
-        client.emit('game:erro', { message: 'Nenhuma sala aberta para encerrar.' });
+        client.emit('game:erro', {
+          message: 'Nenhuma sala aberta para encerrar.',
+        });
         return;
       }
 
-      // Stop any pending question timer
       this.gameStateService.clearTimer();
 
-      // Mark the session as finished in Neon, same as a normal game end
       if (state.gameSessionId) {
         try {
           await this.gameResultsService.finalizarSessao(state.gameSessionId);
         } catch (dbErr) {
-          this.logger.error('Failed to update GameSession status on encerrarSala', dbErr);
+          this.logger.error(
+            'Failed to update GameSession status on encerrarSala',
+            dbErr,
+          );
         }
       }
 
-      // Tell every connected player the room is closed
       this.server.to('players').emit('game:salaEncerrada');
 
-      // Reset in-memory state
       this.gameStateService.resetar();
       this.questions = [];
+      this.currentQuiz = null;
 
       this._broadcastEstado();
       this._emitAdminEstado();
@@ -349,12 +348,28 @@ export class GameGateway
     }
   }
 
-  // ─── Player → Server ─────────────────────────────────────────────────────
+  // --- Player -> Server --------------------------------------------------
 
+  /**
+   * Entrada do aluno na partida.
+   *
+   * Regra de negocio corrigida: o aluno so pode entrar se realmente
+   * pertencer a turma informada. Antes, o cliente enviava um nickname
+   * livre e apenas a existencia da turma era checada -- qualquer pessoa
+   * podia entrar em qualquer turma digitando qualquer nome. Agora:
+   *
+   *  1. O payload traz `alunoId` (nao mais um nickname livre).
+   *  2. Buscamos o Aluno e conferimos que aluno.turmaId === turmaId
+   *     (TurmaService.findAlunoInTurma lanca NotFound caso contrario).
+   *  3. O nickname exibido no jogo e sempre aluno.nome, vindo do
+   *     cadastro -- nunca um valor arbitrario enviado pelo cliente.
+   *  4. Um mesmo aluno nao pode ocupar duas conexoes simultaneas na
+   *     mesma partida (ver GameStateService.adicionarJogador).
+   */
   @SubscribeMessage('player:entrar')
   async handleEntrar(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: EntrarPayload,
+    @MessageBody() payload: EntrarDto,
   ): Promise<void> {
     try {
       const state = this.gameStateService.state;
@@ -371,55 +386,60 @@ export class GameGateway
         return;
       }
 
-      const { nickname, avatar, turmaId } = payload;
-
-      if (!nickname?.trim() || nickname.trim().length > 20) {
+      const dto = plainToInstance(EntrarDto, payload);
+      const errors = await validate(dto);
+      if (errors.length > 0) {
         client.emit('game:erro', {
-          message: 'Apelido inválido (1–20 caracteres).',
+          message: 'Dados de entrada inválidos (turma, aluno ou avatar).',
         });
         return;
       }
 
-      if (!avatar?.trim()) {
-        client.emit('game:erro', { message: 'Selecione um avatar.' });
+      let aluno;
+      try {
+        aluno = await this.alunoService.findAlunoInTurma(
+          dto.turmaId,
+          dto.alunoId,
+        );
+      } catch {
+        client.emit('game:erro', {
+          message:
+            'Aluno não encontrado nesta turma. Confira sua turma e tente novamente.',
+        });
         return;
       }
 
-      if (!turmaId?.trim()) {
-        client.emit('game:erro', { message: 'Selecione sua turma.' });
+      const nickname = aluno.nome.trim();
+
+      const playerResult = this.playerResultRepository.create({
+        gameSessionId: state.gameSessionId,
+        nickname,
+        avatar: dto.avatar.trim(),
+        turmaId: dto.turmaId,
+        alunoId: dto.alunoId,
+        score: 0,
+        answers: [],
+      });
+      await this.playerResultRepository.save(playerResult);
+
+      try {
+        this.gameStateService.adicionarJogador(
+          client.id,
+          dto.alunoId,
+          nickname,
+          dto.avatar.trim(),
+          playerResult.id,
+        );
+      } catch (stateErr) {
+        client.emit('game:erro', {
+          message:
+            stateErr instanceof Error
+              ? stateErr.message
+              : 'Erro ao entrar na sala.',
+        });
         return;
       }
 
-      const turma = await this.prisma.withRetry(() =>
-        this.prisma.turma.findUnique({ where: { id: turmaId } }),
-      );
-      if (!turma) {
-        client.emit('game:erro', { message: 'Turma não encontrada.' });
-        return;
-      }
-
-      // Persist PlayerResult in Neon immediately
-      const playerResult = await this.prisma.withRetry(() =>
-        this.prisma.playerResult.create({
-          data: {
-            gameSessionId: state.gameSessionId!,
-            nickname: nickname.trim(),
-            avatar: avatar.trim(),
-            turmaId,
-            score: 0,
-            answers: [],
-          },
-        }),
-      );
-
-      this.gameStateService.adicionarJogador(
-        client.id,
-        nickname.trim(),
-        avatar.trim(),
-        playerResult.id,
-      );
-
-      // Join socket to players room
       await client.join('players');
 
       this._broadcastEstado();
@@ -464,14 +484,14 @@ export class GameGateway
     } catch (err) {
       this.logger.error('player:responder error', err);
       client.emit('game:erro', {
-        message: err instanceof Error ? err.message : 'Erro ao registrar resposta.',
+        message:
+          err instanceof Error ? err.message : 'Erro ao registrar resposta.',
       });
     }
   }
 
-  // ─── Private helpers ─────────────────────────────────────────────────────
+  // --- Private helpers -----------------------------------------------------
 
-  /** Emit game:estado to everyone connected (including players not in the room yet) */
   private _broadcastEstado(): void {
     const state = this.gameStateService.state;
     this.server.emit('game:estado', {
@@ -479,10 +499,11 @@ export class GameGateway
       playerCount: state.players.size,
       totalQuestions: this.questions.length || undefined,
       musicEnabled: state.musicEnabled,
+      quizTitle: this.currentQuiz?.title ?? null,
+      quizImageUrl: this.currentQuiz?.imageUrl ?? null,
     });
   }
 
-  /** Emit admin:estado to the admins room */
   private _emitAdminEstado(): void {
     const state = this.gameStateService.state;
     const currentQuestion = this.questions[state.currentQuestionIndex];
@@ -524,10 +545,6 @@ export class GameGateway
     });
   }
 
-  /**
-   * After a player disconnects during a question, check whether all
-   * remaining players have already answered and trigger the result if so.
-   */
   private _checkAllAnswered(questionId: string): void {
     const state = this.gameStateService.state;
     if (state.players.size === 0) {
@@ -542,7 +559,6 @@ export class GameGateway
     }
   }
 
-  /** Calculate and broadcast question result */
   private async _processarResultado(): Promise<void> {
     try {
       const state = this.gameStateService.state;
@@ -567,7 +583,6 @@ export class GameGateway
         question.timeLimitSec,
       );
 
-      // Persist each player's accumulated score and answers array in Neon
       await Promise.allSettled(
         [...state.players.values()].map(async (player) => {
           try {
@@ -579,11 +594,9 @@ export class GameGateway
                 timeMs: a.timeMs,
               }),
             );
-            await this.prisma.withRetry(() =>
-              this.prisma.playerResult.update({
-                where: { id: player.playerResultId },
-                data: { score: player.score, answers: answersArray },
-              }),
+            await this.playerResultRepository.update(
+              { id: player.playerResultId },
+              { score: player.score, answers: answersArray },
             );
           } catch (dbErr) {
             this.logger.error(
@@ -600,7 +613,6 @@ export class GameGateway
         score: e.score,
       }));
 
-      // Emit individual result to each player socket
       for (const [idx, entry] of ranking.entries()) {
         const socket = this.server.sockets.sockets.get(entry.socketId);
         if (socket) {
@@ -617,7 +629,6 @@ export class GameGateway
         }
       }
 
-      // Full ranking to admins
       this.server.to('admins').emit('admin:placar', {
         correctIndex: question.correctIndex,
         ranking: ranking.map((e) => ({
@@ -636,7 +647,6 @@ export class GameGateway
     }
   }
 
-  /** Show final podium — persist session but keep state until admin closes room */
   private async _finalizarJogo(): Promise<void> {
     try {
       const state = this.gameStateService.state;

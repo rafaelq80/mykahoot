@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { JoinRoomForm } from '../../features/player-session/components/JoinRoomForm';
+import { AvatarSelectPage } from './AvatarSelectPage';
 import { useGameStore } from '../../stores/useGameStore';
 import { getSocket } from '../../hooks/useSocket';
+
+type Step = 'form' | 'avatar';
+
+interface SelectedAluno {
+  alunoId: string;
+  nickname: string;
+  turmaId: string;
+}
 
 export default function JoinRoomPage() {
   const setPlayerInfo = useGameStore((s) => s.setPlayerInfo);
@@ -11,6 +20,8 @@ export default function JoinRoomPage() {
   const joinPending = useGameStore((s) => s.joinPending);
   const errorMessage = useGameStore((s) => s.errorMessage);
   const [connected, setConnected] = useState(getSocket().connected);
+  const [step, setStep] = useState<Step>('form');
+  const [selected, setSelected] = useState<SelectedAluno | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -27,18 +38,44 @@ export default function JoinRoomPage() {
 
   const roomOpen = gameStatus === 'lobby';
 
-  const handleJoin = (nickname: string, avatar: string, turmaId: string) => {
-    if (!roomOpen) return;
-    setPlayerInfo({ nickname, avatar });
-    setJoinPending(true);
-    getSocket().emit('player:entrar', { nickname, avatar, turmaId });
+  const handleContinue = (alunoId: string, nickname: string, turmaId: string) => {
+    setSelected({ alunoId, nickname, turmaId });
+    setStep('avatar');
   };
+
+  const handleBack = () => {
+    setStep('form');
+  };
+
+  const handleJoin = (avatar: string) => {
+    if (!roomOpen || !selected) return;
+    setPlayerInfo({ nickname: selected.nickname, avatar });
+    setJoinPending(true);
+    getSocket().emit('player:entrar', {
+      alunoId: selected.alunoId,
+      avatar,
+      turmaId: selected.turmaId,
+    });
+  };
+
+  if (step === 'avatar' && selected) {
+    return (
+      <AvatarSelectPage
+        nickname={selected.nickname}
+        onConfirm={handleJoin}
+        onBack={handleBack}
+        roomOpen={roomOpen}
+        joinPending={joinPending}
+        playerCount={playerCount}
+        errorMessage={errorMessage}
+      />
+    );
+  }
 
   return (
     <JoinRoomForm
-      onJoin={handleJoin}
+      onContinue={handleContinue}
       roomOpen={roomOpen}
-      joinPending={joinPending}
       connected={connected}
       playerCount={playerCount}
       errorMessage={errorMessage}
