@@ -1,30 +1,18 @@
 import { useGameStore } from '../../stores/useGameStore';
-import { PlayerVolumeControl } from '../../features/background-music/components/PlayerVolumeControl';
 
 const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 
 export default function LobbyPage() {
   const playerCount = useGameStore((s) => s.playerCount);
   const playerInfo = useGameStore((s) => s.playerInfo);
-  const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
   const quizTitle = useGameStore((s) => s.quizTitle);
   const quizImageUrl = useGameStore((s) => s.quizImageUrl);
 
   return (
     <div className="flex min-h-dvh flex-col bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Top bar: Padronizado com o QuestionPage */}
-      <header className="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-quiz-border bg-quiz-surface">
-        <div className="flex items-center gap-3">
-          <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
-        </div>
-
-        {/* Status de Conexão no canto superior direito */}
-        <div className="flex items-center gap-2">
-          <PlayerVolumeControl
-            musicEnabledByAdmin={musicEnabledByAdmin}
-            buttonClassName="text-white hover:bg-white/10"
-          />
-        </div>
+      <header className="flex items-center px-4 py-4 sm:px-6 border-b border-quiz-border bg-quiz-surface">
+        <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
       </header>
 
       {/* Conteúdo central */}
@@ -93,7 +81,7 @@ export default function LobbyPage() {
             Status do Jogo
           </span>
           <span className="text-body-sm font-bold text-white/90">
-            Pronto para jogar!
+            {`Sala aberta - ${playerCount} conectado${playerCount === 1 ? '' : 's'}`}
           </span>
         </div>
       </footer>

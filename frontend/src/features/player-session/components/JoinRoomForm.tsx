@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { cn } from '../../../lib/utils';
-import { PlayerVolumeControl } from '../../background-music/components/PlayerVolumeControl';
 import { useGameStore } from '../../../stores/useGameStore';
 import type { Turma } from '../../../types/turma';
 
@@ -23,7 +22,6 @@ export function JoinRoomForm({
   playerCount,
   errorMessage,
 }: JoinRoomFormProps) {
-  const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
   const quizTitle = useGameStore((s) => s.quizTitle);
   const quizImageUrl = useGameStore((s) => s.quizImageUrl);
 
@@ -105,28 +103,11 @@ export function JoinRoomForm({
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-quiz-bg-to bg-quiz-gradient text-white">
       {/* Header — mesmo padrão do LobbyPage */}
-      <header className="flex items-center justify-between border-b border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
+      <header className="flex items-center border-b border-quiz-border bg-quiz-surface px-4 py-3 sm:px-6">
         <span className="font-extrabold text-lg sm:text-xl">{APP_NAME}</span>
-
-        <PlayerVolumeControl
-          musicEnabledByAdmin={musicEnabledByAdmin}
-          buttonClassName="text-white hover:bg-white/10"
-        />
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6">
-        {!roomOpen && (
-          <div
-            role="status"
-            className="mb-4 w-full max-w-lg rounded-2xl bg-yellow-400 px-6 py-3 text-center shadow-md"
-          >
-            <p className="font-bold text-body-lg text-black">Sala fechada</p>
-            <p className="mt-1 text-body-sm text-black/70">
-              Aguarde o professor abrir uma nova partida para entrar.
-            </p>
-          </div>
-        )}
-
         {turmasError && (
           <div
             role="alert"

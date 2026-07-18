@@ -20,7 +20,6 @@ export function PodiumDisplay({
   you,
   playerInfo,
   playerCount,
-  headerBadge = 'Partida Finalizada',
   appName = 'QuizMaster Live',
 }: PodiumDisplayProps) {
   const isSelf = (nickname: string, avatar: string) =>
@@ -35,13 +34,6 @@ export function PodiumDisplay({
     <div className="flex w-full min-h-0 flex-1 flex-col">
       <header className="flex w-full items-center justify-between border-b border-quiz-border bg-quiz-surface px-4 py-4 sm:px-6">
         <span className="font-extrabold text-lg sm:text-xl">{appName}</span>
-        <div className="flex items-center gap-2 rounded-full bg-quiz-highlight px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-quiz-highlight-foreground shadow-sm">
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-quiz-highlight-foreground animate-pulse motion-reduce:animate-none"
-            aria-hidden="true"
-          />
-          {headerBadge}
-        </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 py-8">
