@@ -5,6 +5,7 @@ import { PlayersSidebar } from '../features/admin-control/components/PlayersSide
 import { FullScoreboardTable } from '../features/admin-control/components/FullScoreboardTable';
 import { AdminPodiumPanel } from '../features/admin-control/components/AdminPodiumPanel';
 import { AdminScreenLayout } from '../features/admin-control/components/AdminScreenLayout';
+import { EditQuizPage } from '../features/admin-control/components/EditQuizPage';
 import { useAdminStore } from '../stores/useAdminStore';
 import { getSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
@@ -14,6 +15,8 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 interface Quiz {
   id: string;
   title: string;
+  themeId: string;
+  imageUrl: string | null;
   theme: { name: string };
   _count: { questions: number };
 }
@@ -28,12 +31,38 @@ interface Question {
   order: number;
 }
 
-export function AdminDashboardPage({ token }: { token: string; onLogout: () => void }) {
+/** Estado da sala de espera reportado pro rodapé global (AdminPage). */
+export interface WaitingRoomFooterState {
+  playersCount: number;
+  iniciarDisabled: boolean;
+  onFinalizarSala: () => void;
+  onIniciarJogo: () => void;
+}
+
+export function AdminDashboardPage({
+  token,
+  onQuizzesCountChange,
+  onWaitingRoomStateChange,
+}: {
+  token: string;
+  onLogout: () => void;
+  adminUsername?: string | null;
+  /** Reporta o total de quizzes carregados pro AdminPage, que exibe no rodapé global. */
+  onQuizzesCountChange?: (count: number) => void;
+  /**
+   * Reporta o estado da sala de espera (contagem de jogadores + ações) pro
+   * AdminPage, que os exibe no rodapé global no lugar do avatar/contagem de
+   * quizzes enquanto a sala estiver aberta. `null` quando a sala não está
+   * na tela de espera (ex: seleção de quiz ou partida em andamento).
+   */
+  onWaitingRoomStateChange?: (state: WaitingRoomFooterState | null) => void;
+}) {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuizId, setSelectedQuizId] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roomOpen, setRoomOpen] = useState(false);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
+  const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
 
   const screen = useAdminStore((s) => s.screen);
   const currentQuestionIndex = useAdminStore((s) => s.currentQuestionIndex);
@@ -41,24 +70,29 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
   const answeredCount = useAdminStore((s) => s.answeredCount);
   const players = useAdminStore((s) => s.players);
 
-  useEffect(() => {
-    void fetch(`${API_URL}/quizzes`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (r) => {
-        if (!r.ok) {
-          throw new Error(`GET /quizzes falhou com status ${r.status}`);
-        }
-        return r.json();
-      })
-      .then((d: Quiz[]) => {
-        setQuizzes(Array.isArray(d) ? d : []);
-        setQuizzesError(null);
-      })
-      .catch((err: Error) => {
-        console.error(err);
-        setQuizzes([]);
-        setQuizzesError('Não foi possível carregar os quizzes. Tente novamente.');
-      });
+  const loadQuizzes = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/quizzes`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) {
+        throw new Error(`GET /quizzes falhou com status ${r.status}`);
+      }
+      const d = (await r.json()) as Quiz[];
+      setQuizzes(Array.isArray(d) ? d : []);
+      setQuizzesError(null);
+    } catch (err) {
+      console.error(err);
+      setQuizzes([]);
+      setQuizzesError('Não foi possível carregar os quizzes. Tente novamente.');
+    }
   }, [token]);
+
+  useEffect(() => {
+    void loadQuizzes();
+  }, [loadQuizzes]);
+
+  useEffect(() => {
+    onQuizzesCountChange?.(quizzes.length);
+  }, [quizzes, onQuizzesCountChange]);
 
   useEffect(() => {
     if (!selectedQuizId) {
@@ -88,11 +122,11 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
     if (screen === 'lobby') setRoomOpen(false);
   }, [screen]);
 
-  const handleAbrirSala = useCallback(() => {
-    if (!selectedQuizId) return;
-    getSocket().emit('admin:selecionarTema', { quizId: selectedQuizId });
+  const handlePlay = useCallback((quizId: string) => {
+    setSelectedQuizId(quizId);
+    getSocket().emit('admin:selecionarTema', { quizId });
     setRoomOpen(true);
-  }, [selectedQuizId]);
+  }, []);
 
   const handleLiberarPergunta = useCallback(() => {
     if (!questions[currentQuestionIndex]) return;
@@ -112,27 +146,71 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
     setRoomOpen(false);
   }, []);
 
+  const handleFinalizarSalaClick = useCallback(() => {
+    if (window.confirm('Encerrar a sala? Os jogadores serão desconectados.')) {
+      handleFinalizarSala();
+    }
+  }, [handleFinalizarSala]);
+
+  // Reporta pro AdminPage o estado do rodapé global enquanto a sala de
+  // espera (lobby + roomOpen) estiver ativa; `null` em qualquer outro caso
+  // (seleção de quiz, edição, ou partida em andamento).
+  useEffect(() => {
+    const active = screen === 'lobby' && roomOpen && !editingQuizId;
+    onWaitingRoomStateChange?.(
+      active
+        ? {
+            playersCount: players.length,
+            iniciarDisabled: players.length === 0,
+            onFinalizarSala: handleFinalizarSalaClick,
+            onIniciarJogo: handleLiberarPergunta,
+          }
+        : null,
+    );
+  }, [
+    screen,
+    roomOpen,
+    editingQuizId,
+    players.length,
+    handleFinalizarSalaClick,
+    handleLiberarPergunta,
+    onWaitingRoomStateChange,
+  ]);
+
+  // Limpa o rodapé global ao desmontar (ex: troca de aba).
+  useEffect(() => {
+    return () => {
+      onWaitingRoomStateChange?.(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectedQuiz = quizzes.find((q) => q.id === selectedQuizId);
   const isTimerUrgent = timer > 0 && timer <= 5;
 
   if (screen === 'lobby') {
-    return (
-      <>
-        {quizzesError && (
-          <div className="mx-5 mt-4 rounded-xl bg-option-a/10 px-4 py-3 text-body-sm font-medium text-option-a sm:mx-8">
-            {quizzesError}
-          </div>
-        )}
-        <WaitingRoomPanel
-          quizzes={quizzes}
-          selectedQuizId={selectedQuizId}
-          onSelectQuiz={setSelectedQuizId}
-          onAbrirSala={handleAbrirSala}
-          onLiberarPergunta={handleLiberarPergunta}
-          onFinalizarSala={handleFinalizarSala}
-          roomOpen={roomOpen}
+    if (editingQuizId) {
+      return (
+        <EditQuizPage
+          quizId={editingQuizId}
+          token={token}
+          onClose={() => setEditingQuizId(null)}
+          onSaved={() => {
+            void loadQuizzes();
+          }}
         />
-      </>
+      );
+    }
+
+    return (
+      <WaitingRoomPanel
+        quizzes={quizzes}
+        selectedQuizId={selectedQuizId}
+        onPlay={handlePlay}
+        onEditQuiz={setEditingQuizId}
+        roomOpen={roomOpen}
+        quizzesError={quizzesError}
+      />
     );
   }
 
@@ -178,7 +256,7 @@ export function AdminDashboardPage({ token }: { token: string; onLogout: () => v
             <span className="text-lg">{timer}s</span>
           </div>
         ) : (
-          <span className="rounded-full bg-surface-container px-4 py-2 text-label-xs font-bold uppercase tracking-[0.14em] text-brand">
+          <span className="rounded-full bg-white/15 px-4 py-2 text-label-xs font-bold uppercase tracking-[0.14em] text-white">
             {screen === 'showing_result' ? 'Resultado' : 'Em andamento'}
           </span>
         )

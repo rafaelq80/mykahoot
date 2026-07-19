@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { cn } from '../lib/utils';
 
 interface Props {
-  onLogin: (token: string) => void;
+  onLogin: (token: string, username: string) => void;
 }
 
 export function AdminLoginPage({ onLogin }: Props) {
@@ -29,7 +29,7 @@ export function AdminLoginPage({ onLogin }: Props) {
         return;
       }
       const data = (await res.json()) as { access_token: string };
-      onLogin(data.access_token);
+      onLogin(data.access_token, username);
     } catch {
       setError('Erro ao conectar com o servidor.');
     } finally {
@@ -40,7 +40,7 @@ export function AdminLoginPage({ onLogin }: Props) {
   const canSubmit = !loading && username.trim().length > 0 && password.trim().length > 0;
 
   return (
-    <div className="relative min-h-dvh flex flex-col bg-brand bg-dot-pattern">
+    <div className="relative min-h-dvh flex flex-col bg-quiz-bg-to bg-quiz-gradient">
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm animate-[slideUp_0.35s_ease_both]">
           {/* Logo above card */}

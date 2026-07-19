@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { cn } from '../lib/utils';
+import { AdminScreenLayout } from '../features/admin-control/components/AdminScreenLayout';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const IK_PUBLIC_KEY = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ?? '';
@@ -118,30 +119,31 @@ export function AdminQuizzesPage({ token }: { token: string }) {
     await loadQuestions(selectedQuizId); showFeedback('Pergunta removida.');
   };
 
-  const inputCls = 'w-full rounded-lg border-2 border-surface bg-surface px-3 py-2 text-sm font-medium focus:border-brand focus:outline-none';
+  const inputCls = 'w-full rounded-lg border border-quiz-border bg-quiz-surface px-3 py-2 text-sm font-medium text-white placeholder:text-quiz-text-muted focus:border-quiz-highlight focus:outline-none';
   const btnCls = 'rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed';
   const deleteBtnCls = 'rounded-lg bg-option-a px-2 py-1 text-xs font-bold text-white active:scale-95 transition-all shrink-0';
 
   return (
-    <div className="min-h-full flex-1 p-4 sm:p-6">
+    <AdminScreenLayout title="Quizzes" subtitle="Gerencie temas, quizzes e perguntas">
       {feedback && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-brand px-5 py-2 font-bold text-white shadow-md text-sm">
           {feedback}
         </div>
       )}
 
-      {/* Card branco sobre o fundo roxo do admin, mesmo padrão do login/join de players */}
-      <div className="rounded-2xl bg-white shadow-xl flex flex-col lg:flex-row gap-0 divide-y lg:divide-y-0 lg:divide-x divide-surface-container overflow-hidden">
+      <div className="flex flex-1 flex-col px-5 py-6 sm:px-8">
+        {/* Painel vidro sobre o gradiente do admin — mesmo padrão do resto do painel do professor */}
+        <div className="card-glass-strong flex flex-col overflow-hidden divide-y divide-quiz-border lg:flex-row lg:divide-y-0 lg:divide-x">
         {/* Themes */}
         <section className="flex flex-col gap-3 p-5 lg:w-80">
-          <h2 className="font-black text-base text-brand">Temas</h2>
+          <h2 className="font-black text-base text-white">Temas</h2>
           <input className={inputCls} placeholder="Nome do tema *" value={themeName} onChange={(e) => setThemeName(e.target.value)} />
           <input className={inputCls} placeholder="Descrição (opcional)" value={themeDesc} onChange={(e) => setThemeDesc(e.target.value)} />
           <button type="button" className={btnCls} onClick={() => void createTheme()}>+ Criar tema</button>
           <ul className="flex flex-col gap-2 mt-2">
             {themes.map((t) => (
-              <li key={t.id} className="flex items-center justify-between rounded-lg border border-surface-container p-3 text-sm">
-                <div><strong>{t.name}</strong>{t.description && <span className="ml-1 text-gray-400">— {t.description}</span>}</div>
+              <li key={t.id} className="flex items-center justify-between rounded-lg border border-quiz-border p-3 text-sm text-white">
+                <div><strong>{t.name}</strong>{t.description && <span className="ml-1 text-quiz-text-muted">— {t.description}</span>}</div>
                 <button type="button" className={deleteBtnCls} onClick={() => void deleteTheme(t.id)}>✕</button>
               </li>
             ))}
@@ -150,7 +152,7 @@ export function AdminQuizzesPage({ token }: { token: string }) {
 
         {/* Quizzes */}
         <section className="flex flex-col gap-3 p-5 lg:w-80">
-          <h2 className="font-black text-base text-brand">Quizzes</h2>
+          <h2 className="font-black text-base text-white">Quizzes</h2>
           <input className={inputCls} placeholder="Título do quiz *" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} />
           <select className={inputCls} value={quizThemeId} onChange={(e) => setQuizThemeId(e.target.value)}>
             <option value="">Selecione o tema *</option>
@@ -160,9 +162,9 @@ export function AdminQuizzesPage({ token }: { token: string }) {
           <ul className="flex flex-col gap-2 mt-2">
             {quizzes.map((q) => (
               <li key={q.id}
-                className={cn('flex items-center justify-between rounded-lg border p-3 text-sm cursor-pointer transition-colors', selectedQuizId === q.id ? 'border-brand bg-brand/5' : 'border-surface-container hover:bg-surface-container')}
+                className={cn('flex items-center justify-between rounded-lg border p-3 text-sm text-white cursor-pointer transition-colors', selectedQuizId === q.id ? 'border-brand bg-brand/20' : 'border-quiz-border hover:bg-quiz-surface')}
                 onClick={() => setSelectedQuizId(q.id)}>
-                <div><strong>{q.title}</strong><span className="ml-1 text-gray-400">— {q.theme?.name ?? 'Sem tema'} ({q._count?.questions ?? 0})</span></div>
+                <div><strong>{q.title}</strong><span className="ml-1 text-quiz-text-muted">— {q.theme?.name ?? 'Sem tema'} ({q._count?.questions ?? 0})</span></div>
                 <button type="button" className={deleteBtnCls} onClick={(e) => { e.stopPropagation(); void deleteQuiz(q.id); }}>✕</button>
               </li>
             ))}
@@ -172,7 +174,7 @@ export function AdminQuizzesPage({ token }: { token: string }) {
         {/* Questions */}
         {selectedQuizId && (
           <section className="flex flex-col gap-3 p-5 flex-1">
-            <h2 className="font-black text-base text-brand">Perguntas</h2>
+            <h2 className="font-black text-base text-white">Perguntas</h2>
             <textarea className={cn(inputCls, 'resize-y')} placeholder="Texto da pergunta *" value={qText} onChange={(e) => setQText(e.target.value)} rows={3} />
             {qOptions.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -181,18 +183,18 @@ export function AdminQuizzesPage({ token }: { token: string }) {
               </div>
             ))}
             <div className="flex gap-3">
-              <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-quiz-text-muted font-medium">
                 Tempo (s)
                 <input type="number" className={cn(inputCls, 'w-20')} value={qTime} min={5} max={120} onChange={(e) => setQTime(Number(e.target.value))} />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-quiz-text-muted font-medium">
                 Ordem
                 <input type="number" className={cn(inputCls, 'w-20')} value={qOrder} min={1} onChange={(e) => setQOrder(Number(e.target.value))} />
               </label>
             </div>
-            <label className="flex flex-col gap-1 text-xs text-gray-500 font-medium">
+            <label className="flex flex-col gap-1 text-xs text-quiz-text-muted font-medium">
               Imagem (upload)
-              <input type="file" accept="image/*" className="text-sm" onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)} />
+              <input type="file" accept="image/*" className="text-sm text-white" onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)} />
             </label>
             <input className={inputCls} placeholder="Ou URL da imagem: https://..." value={qImageUrl} onChange={(e) => setQImageUrl(e.target.value)} />
             <button type="button" className={btnCls} disabled={uploading || !qText.trim() || qOptions.some((o) => !o.trim())} onClick={() => void createQuestion()}>
@@ -200,15 +202,16 @@ export function AdminQuizzesPage({ token }: { token: string }) {
             </button>
             <ul className="flex flex-col gap-2 mt-2">
               {questions.map((q, idx) => (
-                <li key={q.id} className="flex items-center justify-between rounded-lg border border-surface-container p-3 text-sm">
-                  <div><span className="text-gray-400">{idx + 1}. </span><strong>{q.text}</strong><span className="ml-1 text-gray-400">({q.timeLimitSec}s)</span></div>
+                <li key={q.id} className="flex items-center justify-between rounded-lg border border-quiz-border p-3 text-sm text-white">
+                  <div><span className="text-quiz-text-muted">{idx + 1}. </span><strong>{q.text}</strong><span className="ml-1 text-quiz-text-muted">({q.timeLimitSec}s)</span></div>
                   <button type="button" className={deleteBtnCls} onClick={() => void deleteQuestion(q.id)}>✕</button>
                 </li>
               ))}
             </ul>
           </section>
         )}
+        </div>
       </div>
-    </div>
+    </AdminScreenLayout>
   );
 }

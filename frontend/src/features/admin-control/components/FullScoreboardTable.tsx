@@ -15,12 +15,12 @@ export function FullScoreboardTable() {
   if (rows.length === 0) return null;
 
   return (
-    <div className="w-full overflow-x-auto rounded-2xl border-2 border-white/20 bg-white shadow-md">
-      <div className="border-b border-surface-container px-4 py-3">
-        <h3 className="font-black text-brand">Placar completo</h3>
+    <div className="card-glass-strong w-full overflow-x-auto">
+      <div className="border-b border-quiz-border px-4 py-3">
+        <h3 className="font-black text-white">Placar completo</h3>
       </div>
       <table className="w-full text-sm" aria-label="Placar completo">
-        <thead className="bg-surface-container text-xs uppercase text-gray-500">
+        <thead className="bg-quiz-surface-strong text-xs uppercase text-quiz-text-muted">
           <tr>
             <th className="px-3 py-2 text-left">#</th>
             <th className="px-3 py-2 text-left">Jogador</th>
@@ -30,19 +30,19 @@ export function FullScoreboardTable() {
         </thead>
         <tbody>
           {rows.map((entry, idx) => (
-            <tr key={entry.nickname + idx} className="border-t border-surface-container">
-              <td className="px-3 py-2 font-mono text-gray-400">{idx + 1}</td>
-              <td className="px-3 py-2 font-medium">
+            <tr key={entry.nickname + idx} className="border-t border-quiz-border">
+              <td className="px-3 py-2 font-mono text-quiz-text-muted">{idx + 1}</td>
+              <td className="px-3 py-2 font-medium text-white">
                 {entry.avatar} {entry.nickname}
               </td>
-              <td className="px-3 py-2 text-right font-mono font-bold text-brand">
+              <td className="px-3 py-2 text-right font-mono font-bold text-white">
                 {entry.score.toLocaleString()}
               </td>
               {screen === 'showing_result' && 'correct' in entry && (
                 <td
                   className={cn(
                     'px-3 py-2 text-center font-mono',
-                    entry.correct ? 'text-green-600' : 'text-option-a',
+                    entry.correct ? 'text-option-d' : 'text-option-a',
                   )}
                 >
                   {entry.selectedIndex === -1

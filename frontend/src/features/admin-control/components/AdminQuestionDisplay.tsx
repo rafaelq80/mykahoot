@@ -28,10 +28,10 @@ export function AdminOptionCard({
   return (
     <div
       className={cn(
-        'flex min-h-[72px] w-full items-center gap-4 rounded-xl px-5 py-4',
+        'flex min-h-18 w-full items-center gap-4 rounded-xl px-5 py-4',
         'text-left font-bold text-lg text-white shadow-md',
         BG_CLASSES[index],
-        mode === 'result' && isCorrect && 'ring-4 ring-white ring-offset-2 ring-offset-brand',
+        mode === 'result' && isCorrect && 'ring-4 ring-white ring-offset-2',
         mode === 'result' && !isCorrect && 'opacity-85',
       )}
     >
@@ -43,7 +43,7 @@ export function AdminOptionCard({
         <span
           className={cn(
             'shrink-0 rounded-full px-3 py-1 text-sm font-black tabular-nums',
-            isCorrect ? 'bg-white text-brand' : 'bg-black/20 text-white',
+            isCorrect ? 'bg-white text-brand' : 'bg-quiz-surface-strong text-white',
           )}
         >
           {voteCount}
@@ -80,15 +80,15 @@ export function AdminQuestionDisplay({
         <img
           src={imageUrl}
           alt="Imagem da pergunta"
-          className="mx-auto aspect-4/3 w-full max-w-sm rounded-xl border-2 border-white/20 object-cover shadow-lg"
+          className="mx-auto aspect-4/3 w-full max-w-sm rounded-xl border border-quiz-border object-cover shadow-lg"
         />
       ) : (
         <div
-          className="mx-auto flex aspect-4/3 w-full max-w-sm items-center justify-center rounded-xl border-2 border-white/20 bg-white/10 p-6"
+          className="mx-auto flex aspect-4/3 w-full max-w-sm items-center justify-center rounded-xl border border-quiz-border bg-quiz-surface p-6"
           role="img"
           aria-label="Pergunta sem imagem"
         >
-          <div className="flex h-full w-2/3 items-center justify-center rounded-lg bg-white/10">
+          <div className="flex h-full w-2/3 items-center justify-center rounded-lg bg-quiz-surface-strong">
             <svg
               width="28"
               height="28"

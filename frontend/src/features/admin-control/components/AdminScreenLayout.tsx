@@ -12,12 +12,14 @@ interface AdminScreenLayoutProps {
 }
 
 /**
- * Layout padrão das telas do professor: fundo roxo, rodapé branco.
+ * Layout padrão das telas do professor: mesmo fundo em gradiente das telas
+ * do jogador (bg-quiz-gradient), rodapé branco para diferenciar o painel
+ * do professor da experiência do jogador.
  *
  * O cabeçalho branco já existe uma única vez, fixo em `AdminPage` (marca +
  * abas + sair). Este layout NÃO renderiza uma segunda barra de cabeçalho —
  * título/badge/subtitle/headerRight aparecem como um heading dentro do
- * próprio corpo roxo, evitando duas barras brancas empilhadas.
+ * próprio corpo, evitando duas barras brancas empilhadas.
  */
 export function AdminScreenLayout({
   title,
@@ -29,8 +31,13 @@ export function AdminScreenLayout({
   className,
 }: AdminScreenLayoutProps) {
   return (
-    <div className={cn('flex min-h-full flex-1 flex-col bg-brand', className)}>
-      <main className="relative flex flex-1 flex-col overflow-auto bg-brand bg-dot-pattern">
+    <div
+      className={cn(
+        'flex min-h-full flex-1 flex-col bg-quiz-bg-to bg-quiz-gradient text-white',
+        className,
+      )}
+    >
+      <main className="relative flex flex-1 flex-col overflow-auto">
         <div className="relative z-10 flex flex-1 flex-col">
           {/* Heading da tela — parte do corpo roxo, não uma barra própria */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-6 pb-2 sm:px-8">

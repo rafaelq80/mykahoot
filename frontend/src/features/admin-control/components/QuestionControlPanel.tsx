@@ -60,7 +60,7 @@ export function QuestionControlPanel({
       </div>
 
       {/* Pergunta — visual igual ao aluno */}
-      <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-white/15 bg-white/5 px-4 py-8 sm:px-8">
+      <div className="card-glass-strong flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8">
         {screen === 'question_active' && (
           <>
             <AdminQuestionDisplay
@@ -69,7 +69,7 @@ export function QuestionControlPanel({
               options={currentQ.options}
               mode="preview"
             />
-            <p className="mt-6 rounded-full border-2 border-white/30 bg-white/10 px-6 py-2 text-sm font-bold uppercase tracking-widest text-white/80">
+            <p className="mt-6 rounded-full border border-quiz-border bg-quiz-surface-strong px-6 py-2 text-sm font-bold uppercase tracking-widest text-quiz-text-muted">
               Aguardando respostas dos jogadores…
             </p>
           </>
@@ -98,7 +98,7 @@ export function QuestionControlPanel({
           <button
             type="button"
             onClick={onProximaPergunta}
-            className="flex-1 rounded-xl bg-white py-4 text-base font-black tracking-wide text-brand shadow-lg transition-all hover:bg-surface-container active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
+            className="flex-1 rounded-xl bg-quiz-highlight py-4 text-base font-black tracking-wide text-quiz-highlight-foreground shadow-lg transition-all hover:bg-quiz-highlight/90 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiz-highlight focus-visible:ring-offset-2"
           >
             {isLastQuestion ? 'ENCERRAR JOGO ›' : 'PRÓXIMA PERGUNTA ›'}
           </button>
@@ -106,7 +106,7 @@ export function QuestionControlPanel({
             <button
               type="button"
               onClick={onEncerrarJogo}
-              className="rounded-xl border-2 border-white bg-transparent px-6 py-4 text-sm font-bold text-white transition-all hover:bg-white/10 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
+              className="rounded-xl border border-quiz-border bg-quiz-surface px-6 py-4 text-sm font-bold text-white transition-all hover:bg-quiz-surface-strong active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
               Encerrar jogo agora
             </button>
@@ -125,16 +125,16 @@ interface StatCardProps {
 
 function StatCard({ label, value, urgent }: StatCardProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-white/20 bg-white px-3 py-4 text-center shadow-sm">
+    <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-quiz-card-border bg-quiz-card px-3 py-4 text-center shadow-sm">
       <span
         className={cn(
           'font-black tabular-nums leading-none text-2xl sm:text-3xl',
-          urgent ? 'text-option-a' : 'text-brand',
+          urgent ? 'text-option-a' : 'text-white',
         )}
       >
         {value}
       </span>
-      <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+      <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-card-muted">
         {label}
       </span>
     </div>

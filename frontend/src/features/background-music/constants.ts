@@ -6,9 +6,9 @@ export type MusicPhase =
   | 'podium';
 
 export const TRACKS: Record<Exclude<MusicPhase, 'idle'>, string> = {
-  lobby: '/audio/lobby-ambient.mp3',
-  question: '/audio/question-tension.mp3',
-  result: '/audio/lobby-ambient.mp3',
+  lobby: '/audio/lobby-ambient_01.mp3',
+  question: '/audio/question-tension_01.mp3',
+  result: '/audio/lobby-ambient_02.mp3',
   podium: '/audio/podium-celebration.mp3',
 };
 

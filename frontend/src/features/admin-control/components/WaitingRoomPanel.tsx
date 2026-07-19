@@ -1,161 +1,268 @@
+import { useEffect, useState } from 'react';
 import { useAdminStore } from '../../../stores/useAdminStore';
 import { cn } from '../../../lib/utils';
 import { AdminScreenLayout } from './AdminScreenLayout';
 
+interface Quiz {
+  id: string;
+  title: string;
+  theme: { name: string };
+  _count: { questions: number };
+  imageUrl?: string | null;
+}
+
 interface Props {
-  quizzes: { id: string; title: string; theme: { name: string }; _count: { questions: number } }[];
+  quizzes: Quiz[];
   selectedQuizId: string;
-  onSelectQuiz: (id: string) => void;
-  onAbrirSala: () => void;
-  onLiberarPergunta: () => void;
-  onFinalizarSala: () => void;
+  onPlay: (quizId: string) => void;
+  onEditQuiz: (quizId: string) => void;
   roomOpen: boolean;
+  quizzesError: string | null;
+}
+
+const QUIZ_PAGE_SIZE = 10; // 2 linhas x 5 colunas
+const PLAYERS_PAGE_SIZE = 12; // 2 linhas x 6 colunas
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
+      <path
+        d="M14.2 2.5a1.7 1.7 0 0 1 2.4 2.4L6.5 15 3 16l1-3.5L14.2 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true">
+      <path d="M5 3.5v13l11-6.5-11-6.5Z" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+      <path
+        d={direction === 'left' ? 'M12.5 4.5 7 10l5.5 5.5' : 'M7.5 4.5 13 10l-5.5 5.5'}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+}: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-center gap-3">
+      <button
+        type="button"
+        onClick={onPrev}
+        disabled={page === 0}
+        aria-label="Página anterior"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition-all enabled:hover:border-brand enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 motion-reduce:transition-none"
+      >
+        <ChevronIcon direction="left" />
+      </button>
+      <span className="text-sm font-bold tabular-nums text-white/60">
+        Página {page + 1} de {totalPages}
+      </span>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={page === totalPages - 1}
+        aria-label="Próxima página"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition-all enabled:hover:border-brand enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 motion-reduce:transition-none"
+      >
+        <ChevronIcon direction="right" />
+      </button>
+    </div>
+  );
 }
 
 export function WaitingRoomPanel({
   quizzes,
   selectedQuizId,
-  onSelectQuiz,
-  onAbrirSala,
-  onLiberarPergunta,
-  onFinalizarSala,
+  onPlay,
+  onEditQuiz,
   roomOpen,
+  quizzesError,
 }: Props) {
   const players = useAdminStore((s) => s.players);
   const errorMessage = useAdminStore((s) => s.errorMessage);
 
+  const totalQuizPages = Math.max(1, Math.ceil(quizzes.length / QUIZ_PAGE_SIZE));
+  const [quizPage, setQuizPage] = useState(0);
+
+  useEffect(() => {
+    if (quizPage > totalQuizPages - 1) setQuizPage(0);
+  }, [totalQuizPages, quizPage]);
+
+  const totalPlayerPages = Math.max(1, Math.ceil(players.length / PLAYERS_PAGE_SIZE));
+  const [playerPage, setPlayerPage] = useState(0);
+
+  useEffect(() => {
+    if (playerPage > totalPlayerPages - 1) setPlayerPage(0);
+  }, [totalPlayerPages, playerPage]);
+
   if (!roomOpen) {
+    const pageQuizzes = quizzes.slice(quizPage * QUIZ_PAGE_SIZE, quizPage * QUIZ_PAGE_SIZE + QUIZ_PAGE_SIZE);
+
+    // Sem `footer` aqui: avatar/nome do admin e contagem de quizzes moraram
+    // pro rodapé global (AdminPage). Aqui é só o grid, ponto.
     return (
-      <AdminScreenLayout
-        title="Abrir Sala"
-        subtitle="Selecione o quiz e abra a sala para os jogadores entrarem"
-        footer={
-          <button
-            type="button"
-            disabled={!selectedQuizId}
-            onClick={onAbrirSala}
-            className={cn(
-              'w-full rounded-xl py-4 font-black text-lg tracking-wide transition-all active:scale-95 motion-reduce:transition-none sm:max-w-md sm:ml-auto',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-              selectedQuizId
-                ? 'cursor-pointer bg-brand text-white shadow-lg hover:bg-brand/90'
-                : 'cursor-not-allowed bg-gray-200 text-gray-400',
-            )}
-          >
-            ABRIR SALA
-          </button>
-        }
-      >
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-10 sm:px-8">
-          {errorMessage && (
+      <AdminScreenLayout title="Escolha um Quiz">
+        <div className="flex flex-1 flex-col gap-3 px-5 py-5 sm:px-8">
+          {(quizzesError || errorMessage) && (
             <div
               role="alert"
-              className="w-full max-w-md rounded-xl bg-option-a px-4 py-3 text-center text-sm font-bold text-white"
+              className="rounded-xl bg-option-a px-4 py-3 text-center text-sm font-bold text-white"
             >
-              {errorMessage}
+              {quizzesError ?? errorMessage}
             </div>
           )}
 
-          <div className="w-full max-w-md rounded-2xl border-2 border-white/20 bg-white p-6 shadow-xl">
-            <label
-              htmlFor="quiz-select"
-              className="mb-2 block font-bold uppercase text-label-xs tracking-[0.14em] text-gray-400"
-            >
-              Quiz da partida
-            </label>
-            <select
-              id="quiz-select"
-              value={selectedQuizId}
-              onChange={(e) => onSelectQuiz(e.target.value)}
-              className="w-full rounded-xl border-2 border-surface-container bg-surface-container px-4 py-3 font-bold text-brand focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <option value="">-- Escolha um quiz --</option>
-              {quizzes.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {q.title} ({q.theme.name}) — {q._count.questions} perguntas
-                </option>
+          {quizzes.length === 0 && !quizzesError ? (
+            <div className="flex flex-1 items-center justify-center">
+              <p className="rounded-2xl border border-quiz-border bg-quiz-surface px-8 py-6 text-center font-medium text-quiz-text-muted">
+                Nenhum quiz cadastrado ainda…
+              </p>
+            </div>
+          ) : (
+            <div className="grid flex-1 grid-cols-5 grid-rows-2 gap-3">
+              {pageQuizzes.map((q) => (
+                <div
+                  key={q.id}
+                  className={cn(
+                    'card-glass-strong flex h-full flex-col overflow-hidden',
+                    selectedQuizId === q.id && 'ring-2 ring-brand',
+                  )}
+                >
+                  <div
+                    className="flex h-20 w-full shrink-0 items-center justify-center overflow-hidden bg-quiz-surface-strong text-2xl font-black text-white"
+                    aria-hidden="true"
+                  >
+                    {q.imageUrl ? (
+                      <img src={q.imageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      q.title.charAt(0).toUpperCase()
+                    )}
+                  </div>
+
+                  <div className="flex flex-1 flex-col gap-1 p-2.5">
+                    <p className="line-clamp-2 text-xs font-black leading-tight text-white">{q.title}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-quiz-text-muted">
+                      {q._count.questions} perguntas
+                    </p>
+
+                    <div className="mt-auto flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onEditQuiz(q.id)}
+                        aria-label={`Editar ${q.title}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-quiz-border text-quiz-text-muted transition-all hover:border-brand hover:text-brand active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onPlay(q.id)}
+                        disabled={q._count.questions === 0}
+                        aria-label={
+                          q._count.questions === 0
+                            ? `${q.title} não tem perguntas cadastradas`
+                            : `Jogar ${q.title}`
+                        }
+                        title={q._count.questions === 0 ? 'Adicione perguntas para poder jogar' : undefined}
+                        className={cn(
+                          'flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-black tracking-wide text-white shadow-sm transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                          q._count.questions === 0
+                            ? 'cursor-not-allowed bg-quiz-surface-strong text-quiz-text-muted shadow-none'
+                            : 'cursor-pointer bg-brand hover:bg-brand/90 active:scale-95',
+                        )}
+                      >
+                        <PlayIcon />
+                        JOGAR
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </select>
-          </div>
+            </div>
+          )}
+
+          {totalQuizPages > 1 && (
+            <Pagination
+              page={quizPage}
+              totalPages={totalQuizPages}
+              onPrev={() => setQuizPage((p) => Math.max(0, p - 1))}
+              onNext={() => setQuizPage((p) => Math.min(totalQuizPages - 1, p + 1))}
+            />
+          )}
         </div>
       </AdminScreenLayout>
     );
   }
 
+  const pagePlayers = players.slice(
+    playerPage * PLAYERS_PAGE_SIZE,
+    playerPage * PLAYERS_PAGE_SIZE + PLAYERS_PAGE_SIZE,
+  );
+
   return (
-    <AdminScreenLayout
-      title="Sala de Espera"
-      badge="Ao vivo"
-      subtitle="Aguardando jogadores entrarem na sala"
-      headerRight={
-        <span className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-label-xs font-extrabold uppercase tracking-[0.14em] text-white">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" />
-          Conectado
-        </span>
-      }
-      footer={
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col leading-tight">
-            <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-              Jogadores conectados
-            </span>
-            <span className="font-black text-4xl tabular-nums text-brand">{players.length}</span>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Encerrar a sala? Os jogadores serão desconectados.')) {
-                  onFinalizarSala();
-                }
-              }}
-              className="rounded-xl border-2 border-option-a bg-white px-6 py-3.5 font-black text-base tracking-wide text-option-a transition-all hover:bg-option-a/5 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-option-a focus-visible:ring-offset-2"
-            >
-              FINALIZAR SALA
-            </button>
-            <button
-              type="button"
-              onClick={onLiberarPergunta}
-              disabled={players.length === 0}
-              className={cn(
-                'rounded-xl px-8 py-3.5 font-black text-base tracking-wide text-white transition-all active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                players.length > 0
-                  ? 'cursor-pointer bg-brand shadow-lg hover:bg-brand/90'
-                  : 'cursor-not-allowed bg-gray-300 text-gray-500',
-              )}
-            >
-              INICIAR JOGO ›
-            </button>
-          </div>
-        </div>
-      }
-    >
-      <div className="flex flex-1 flex-col px-5 py-8 sm:px-8">
+    <AdminScreenLayout title="Sala de Espera">
+      <div className="flex flex-1 flex-col gap-3 px-5 py-8 sm:px-8">
         {players.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="rounded-2xl border-2 border-white/20 bg-white/10 px-8 py-6 text-center font-medium text-white/70">
+            <p className="rounded-2xl border border-quiz-border bg-quiz-surface px-8 py-6 text-center font-medium text-quiz-text-muted">
               Nenhum jogador entrou ainda…
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {players.map((p) => (
+          <div className="grid flex-1 grid-cols-6 grid-rows-2 gap-4">
+            {pagePlayers.map((p) => (
               <div
                 key={p.socketId}
-                className="flex flex-col items-center gap-2 rounded-2xl border-2 border-white/20 bg-white p-4 shadow-md animate-[slideUp_0.3s_ease_both]"
+                className="card-glass-strong flex h-full flex-col items-center justify-center gap-3 p-4 animate-[slideUp_0.3s_ease_both]"
               >
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container text-4xl"
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-quiz-surface-strong text-4xl"
                   aria-hidden="true"
                 >
                   {p.avatar}
                 </div>
-                <p className="w-full truncate text-center text-sm font-bold leading-tight text-brand">
+                <p className="w-full truncate text-center text-sm font-bold leading-tight text-white">
                   {p.nickname}
                 </p>
               </div>
             ))}
           </div>
+        )}
+
+        {totalPlayerPages > 1 && (
+          <Pagination
+            page={playerPage}
+            totalPages={totalPlayerPages}
+            onPrev={() => setPlayerPage((p) => Math.max(0, p - 1))}
+            onNext={() => setPlayerPage((p) => Math.min(totalPlayerPages - 1, p + 1))}
+          />
         )}
       </div>
     </AdminScreenLayout>
