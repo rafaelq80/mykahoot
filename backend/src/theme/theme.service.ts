@@ -5,7 +5,6 @@ import { CreateThemeDto } from './dto/create-theme.dto';
 import { UpdateThemeDto } from './dto/update-theme.dto';
 import { Theme } from './entities/theme.entity';
 
-
 @Injectable()
 export class ThemeService {
   private readonly logger = new Logger(ThemeService.name);

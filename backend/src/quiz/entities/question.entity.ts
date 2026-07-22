@@ -70,5 +70,4 @@ export class Question {
   @JoinColumn({ name: 'quizId' })
   @IsOptional()
   quiz?: Quiz;
-  
 }

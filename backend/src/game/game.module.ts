@@ -11,7 +11,6 @@ import { GameSessionsController } from './game-sessions.controller';
 import { GameStateService } from './game-state.service';
 import { GameGateway } from './game.gateway';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([GameSession, PlayerResult, Question, Quiz]),

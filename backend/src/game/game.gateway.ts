@@ -15,31 +15,22 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
-import { requireAdminSocket, verifyAdminSocket } from '../admin/ws-admin.helper';
+import {
+  requireAdminSocket,
+  verifyAdminSocket,
+} from '../admin/ws-admin.helper';
 import { Question } from '../quiz/entities/question.entity';
 import { Quiz } from '../quiz/entities/quiz.entity';
 import { AlunoService } from '../aluno/aluno.service';
+import { AdminConectarDto } from './dto/admin-conectar.dto';
 import { EntrarDto } from './dto/entrar.dto';
+import { MusicaDto } from './dto/musica.dto';
+import { ResponderDto } from './dto/responder.dto';
+import { SelecionarTemaDto } from './dto/selecionar-tema.dto';
 import { GameSession } from './entities/game-session.entity';
 import { PlayerResult } from './entities/player-result.entity';
 import { GameResultsService } from './game-results.service';
 import { GameStateService } from './game-state.service';
-
-
-// --- Local shape types ----------------------------------------------------
-
-interface SelecionarTemaPayload {
-  quizId: string;
-}
-
-interface AdminConectarPayload {
-  token?: string;
-}
-
-interface ResponderPayload {
-  questionId: string;
-  selectedIndex: number;
-}
 
 // --- Gateway ---------------------------------------------------------------
 
@@ -58,6 +49,24 @@ export class GameGateway
    *  pra popular o lobby do player sem precisar guardar isso no GameState
    *  compartilhado. */
   private currentQuiz: Quiz | null = null;
+
+  /** Simple in-memory rate limiter for socket events (per socketId) */
+  private readonly socketRateMap = new Map<string, number[]>();
+  private readonly SOCKET_RATE_LIMIT = 5;
+  private readonly SOCKET_RATE_WINDOW_MS = 1000;
+
+  private isSocketRateLimited(socketId: string): boolean {
+    const now = Date.now();
+    const timestamps = this.socketRateMap.get(socketId) ?? [];
+    const recent = timestamps.filter((t) => now - t < this.SOCKET_RATE_WINDOW_MS);
+    if (recent.length >= this.SOCKET_RATE_LIMIT) {
+      this.socketRateMap.set(socketId, recent);
+      return true;
+    }
+    recent.push(now);
+    this.socketRateMap.set(socketId, recent);
+    return false;
+  }
 
   constructor(
     private readonly gameStateService: GameStateService,
@@ -93,6 +102,7 @@ export class GameGateway
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Client disconnected: ${client.id}`);
+    this.socketRateMap.delete(client.id);
 
     const state = this.gameStateService.state;
 
@@ -121,9 +131,15 @@ export class GameGateway
   @SubscribeMessage('admin:conectar')
   async handleAdminConectar(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: AdminConectarPayload,
+    @MessageBody() payload: AdminConectarDto,
   ): Promise<void> {
-    if (!(await verifyAdminSocket(client, payload?.token, this.jwtService))) {
+    const dto = plainToInstance(AdminConectarDto, payload ?? {});
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      client.emit('game:erro', { message: 'Dados de conexão inválidos.' });
+      return;
+    }
+    if (!(await verifyAdminSocket(client, dto.token, this.jwtService))) {
       return;
     }
     await client.join('admins');
@@ -133,12 +149,21 @@ export class GameGateway
   @SubscribeMessage('admin:selecionarTema')
   async handleSelecionarTema(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: SelecionarTemaPayload,
+    @MessageBody() payload: SelecionarTemaDto,
   ): Promise<void> {
     if (!requireAdminSocket(client)) return;
 
+    const dto = plainToInstance(SelecionarTemaDto, payload);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      client.emit('game:erro', {
+        message: 'Dados inválidos ao selecionar quiz.',
+      });
+      return;
+    }
+
     try {
-      const { quizId } = payload;
+      const { quizId } = dto;
 
       const questions = await this.questionRepository.find({
         where: { quizId },
@@ -291,13 +316,21 @@ export class GameGateway
   }
 
   @SubscribeMessage('admin:musica')
-  handleMusica(
+  async handleMusica(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { enabled: boolean },
-  ): void {
+    @MessageBody() payload: MusicaDto,
+  ): Promise<void> {
     if (!requireAdminSocket(client)) return;
-    this.gameStateService.setMusicEnabled(!!payload.enabled);
-    this.server.emit('game:musica', { enabled: !!payload.enabled });
+    const dto = plainToInstance(MusicaDto, payload);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      client.emit('game:erro', {
+        message: 'Dados inválidos para controle de música.',
+      });
+      return;
+    }
+    this.gameStateService.setMusicEnabled(!!dto.enabled);
+    this.server.emit('game:musica', { enabled: !!dto.enabled });
     this._broadcastEstado();
     this._emitAdminEstado();
   }
@@ -371,6 +404,10 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: EntrarDto,
   ): Promise<void> {
+    if (this.isSocketRateLimited(client.id)) {
+      client.emit('game:erro', { message: 'Muitas tentativas. Aguarde um momento.' });
+      return;
+    }
     try {
       const state = this.gameStateService.state;
 
@@ -455,9 +492,20 @@ export class GameGateway
   @SubscribeMessage('player:responder')
   async handleResponder(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: ResponderPayload,
+    @MessageBody() payload: ResponderDto,
   ): Promise<void> {
+    if (this.isSocketRateLimited(client.id)) {
+      client.emit('game:erro', { message: 'Muitas tentativas. Aguarde um momento.' });
+      return;
+    }
     try {
+      const dto = plainToInstance(ResponderDto, payload);
+      const errors = await validate(dto);
+      if (errors.length > 0) {
+        client.emit('game:erro', { message: 'Dados de resposta inválidos.' });
+        return;
+      }
+
       const state = this.gameStateService.state;
 
       if (state.status !== 'pergunta_ativa') {
@@ -467,7 +515,7 @@ export class GameGateway
         return;
       }
 
-      const { questionId, selectedIndex } = payload;
+      const { questionId, selectedIndex } = dto;
 
       const allAnswered = this.gameStateService.registrarResposta(
         client.id,

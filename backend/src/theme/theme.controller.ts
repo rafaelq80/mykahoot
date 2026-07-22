@@ -15,7 +15,6 @@ import { CreateThemeDto } from './dto/create-theme.dto';
 import { UpdateThemeDto } from './dto/update-theme.dto';
 import { ThemeService } from './theme.service';
 
-
 @Controller('themes')
 export class ThemeController {
   constructor(private readonly themeService: ThemeService) {}

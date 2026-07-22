@@ -20,7 +20,6 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { QuizService } from './quiz.service';
 
-
 interface AuthRequest extends Request {
   user?: { role: string };
 }

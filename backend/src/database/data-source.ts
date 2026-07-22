@@ -28,9 +28,7 @@ const AppDataSource = new DataSource({
 
   entities: ENTITIES,
 
-  migrations: [
-    join(__dirname, 'migrations', '*.ts'),
-  ],
+  migrations: [join(__dirname, 'migrations', '*.ts')],
 
   synchronize: false,
 

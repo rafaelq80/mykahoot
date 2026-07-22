@@ -5,13 +5,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
-
+import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET must be set in production');
-  }
-
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
@@ -31,6 +27,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
   app.enableCors({ origin: process.env.FRONTEND_URL ?? '*' });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  app.useGlobalFilters(new GlobalExceptionFilter());
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

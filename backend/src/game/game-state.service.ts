@@ -4,8 +4,13 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { GameState, GameStatus, PlayerState, QuestionShape, RankingEntry } from './game.types';
-
+import {
+  GameState,
+  GameStatus,
+  PlayerState,
+  QuestionShape,
+  RankingEntry,
+} from './game.types';
 
 const BASE_POINTS = 1000;
 const MIN_CORRECT_POINTS = 500;

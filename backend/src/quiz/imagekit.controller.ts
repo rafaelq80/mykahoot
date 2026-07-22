@@ -10,7 +10,6 @@ import type { Response } from 'express';
 import { ImageKit } from '@imagekit/nodejs';
 import { JwtAuthGuard } from '../admin/jwt.guard';
 
-
 @Controller('imagekit')
 export class ImageKitController {
   private readonly logger = new Logger(ImageKitController.name);

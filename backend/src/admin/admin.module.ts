@@ -8,13 +8,12 @@ import { JwtAuthGuard } from './jwt.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { Admin } from './entities/admin.entity';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([Admin]),
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET ?? 'fallback-dev-secret',
+      secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: '8h' },
     }),
   ],

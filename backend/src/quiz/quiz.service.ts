@@ -8,7 +8,6 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { Question } from './entities/question.entity';
 import { Quiz } from './entities/quiz.entity';
 
-
 @Injectable()
 export class QuizService {
   private readonly logger = new Logger(QuizService.name);
@@ -31,7 +30,9 @@ export class QuizService {
 
   // ── Quizzes ──────────────────────────────────────────────────────────────
 
-  async findAllQuizzes(): Promise<(Quiz & { _count: { questions: number } })[]> {
+  async findAllQuizzes(): Promise<
+    (Quiz & { _count: { questions: number } })[]
+  > {
     this.logger.log('Finding all quizzes');
     // getRawAndEntities (em vez de getMany) é o que garante que o campo
     // bruto da subquery (quiz_questionCount) chegue até nós — getMany()

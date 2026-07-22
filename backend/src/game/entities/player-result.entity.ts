@@ -77,7 +77,7 @@ export class PlayerResult {
   @JoinColumn({ name: 'turmaId' })
   @IsOptional()
   turma?: Turma | null;
-  
+
   @ManyToOne(() => Aluno, (aluno) => aluno.resultados, {
     nullable: true,
   })

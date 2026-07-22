@@ -45,10 +45,7 @@ export class AlunoController {
   @Delete(':alunoId')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('turmaId') turmaId: string,
-    @Param('alunoId') alunoId: string,
-  ) {
+  remove(@Param('turmaId') turmaId: string, @Param('alunoId') alunoId: string) {
     return this.alunoService.removeAluno(turmaId, alunoId);
   }
 }

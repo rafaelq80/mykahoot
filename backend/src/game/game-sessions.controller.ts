@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../admin/jwt.guard';
 import { GameSession } from './entities/game-session.entity';
 
-
 @Controller('game/sessions')
 @UseGuards(JwtAuthGuard)
 export class GameSessionsController {

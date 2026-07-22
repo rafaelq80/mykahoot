@@ -5,7 +5,6 @@ import { Theme } from './entities/theme.entity';
 import { ThemeController } from './theme.controller';
 import { ThemeService } from './theme.service';
 
-
 @Module({
   imports: [TypeOrmModule.forFeature([Theme]), AdminModule],
   controllers: [ThemeController],
