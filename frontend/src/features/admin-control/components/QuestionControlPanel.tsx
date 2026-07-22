@@ -1,4 +1,3 @@
-import { cn } from '../../../lib/utils';
 import { useAdminStore } from '../../../stores/useAdminStore';
 import {
   AdminQuestionDisplay,
@@ -26,9 +25,6 @@ export function QuestionControlPanel({
   onEncerrarJogo,
 }: Props) {
   const screen = useAdminStore((s) => s.screen);
-  const timer = useAdminStore((s) => s.timer);
-  const answeredCount = useAdminStore((s) => s.answeredCount);
-  const players = useAdminStore((s) => s.players);
   const currentQuestionIndex = useAdminStore((s) => s.currentQuestionIndex);
   const correctIndex = useAdminStore((s) => s.correctIndex);
   const ranking = useAdminStore((s) => s.ranking);
@@ -36,43 +32,27 @@ export function QuestionControlPanel({
 
   const currentQ = questions[currentQuestionIndex] ?? null;
   const isLastQuestion = currentQuestionIndex >= questions.length - 1;
-  const isTimerUrgent = timer > 0 && timer <= 5;
   const voteCounts = computeVoteCounts(ranking);
 
   if (!currentQ) return null;
 
   return (
-    <div className="flex flex-1 flex-col gap-5">
+    <div className="flex flex-1 min-h-0 flex-col items-center gap-4">
       {errorMessage && (
-        <div role="alert" className="rounded-xl bg-option-a px-4 py-3 text-sm font-bold text-white">
+        <div role="alert" className="w-full max-w-3xl rounded-xl bg-option-a px-4 py-3 text-sm font-bold text-white">
           {errorMessage}
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Tempo" value={screen === 'question_active' ? `${timer}s` : '—'} urgent={isTimerUrgent} />
-        <StatCard label="Responderam" value={`${answeredCount} / ${players.length}`} />
-        <StatCard label="Pergunta" value={`${currentQuestionIndex + 1} / ${questions.length}`} />
-        {screen === 'showing_result' && correctIndex !== null && (
-          <StatCard label="Sem resposta" value={String(players.length - answeredCount)} />
-        )}
-      </div>
-
-      {/* Pergunta — visual igual ao aluno */}
-      <div className="card-glass-strong flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8">
+      {/* Pergunta — ocupa o espaço disponível, mesmo visual do aluno, sem poder clicar */}
+      <div className="flex w-full flex-1 min-h-0 flex-col items-center justify-center overflow-hidden">
         {screen === 'question_active' && (
-          <>
-            <AdminQuestionDisplay
-              text={currentQ.text}
-              imageUrl={currentQ.imageUrl}
-              options={currentQ.options}
-              mode="preview"
-            />
-            <p className="mt-6 rounded-full border border-quiz-border bg-quiz-surface-strong px-6 py-2 text-sm font-bold uppercase tracking-widest text-quiz-text-muted">
-              Aguardando respostas dos jogadores…
-            </p>
-          </>
+          <AdminQuestionDisplay
+            text={currentQ.text}
+            imageUrl={currentQ.imageUrl}
+            options={currentQ.options}
+            mode="preview"
+          />
         )}
 
         {screen === 'showing_result' && (
@@ -92,9 +72,9 @@ export function QuestionControlPanel({
         )}
       </div>
 
-      {/* Ações — sempre visíveis com contraste no fundo roxo */}
+      {/* Ações — só aparecem no resultado, pra avançar o jogo */}
       {screen === 'showing_result' && (
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex w-full max-w-3xl shrink-0 flex-col gap-2 sm:flex-row">
           <button
             type="button"
             onClick={onProximaPergunta}
@@ -113,30 +93,6 @@ export function QuestionControlPanel({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-interface StatCardProps {
-  label: string;
-  value: string;
-  urgent?: boolean;
-}
-
-function StatCard({ label, value, urgent }: StatCardProps) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-quiz-card-border bg-quiz-card px-3 py-4 text-center shadow-sm">
-      <span
-        className={cn(
-          'font-black tabular-nums leading-none text-2xl sm:text-3xl',
-          urgent ? 'text-option-a' : 'text-white',
-        )}
-      >
-        {value}
-      </span>
-      <span className="text-label-xs font-bold uppercase tracking-[0.14em] text-quiz-card-muted">
-        {label}
-      </span>
     </div>
   );
 }
