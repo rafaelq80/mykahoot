@@ -1,29 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { cn } from '../lib/utils';
+import { uploadToImageKit, validateImageFile } from '../services/imagekit';
 import { AdminScreenLayout } from '../features/admin-control/components/AdminScreenLayout';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const IK_PUBLIC_KEY = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ?? '';
-const IK_ENDPOINT = import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT ?? '';
 
 interface Theme { id: string; name: string; description?: string }
 interface Quiz { id: string; title: string; themeId: string; theme: { name: string }; _count: { questions: number } }
 interface Question { id: string; text: string; imageUrl: string | null; options: string[]; correctIndex: number; timeLimitSec: number; order: number }
-
-async function uploadToImageKit(file: File, token: string): Promise<string | null> {
-  try {
-    const authRes = await fetch(`${API_URL}/imagekit/auth`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!authRes.ok) return null;
-    const auth = (await authRes.json()) as { token: string; expire: number; signature: string };
-    const fd = new FormData();
-    fd.append('file', file); fd.append('fileName', file.name);
-    fd.append('publicKey', IK_PUBLIC_KEY); fd.append('signature', auth.signature);
-    fd.append('expire', String(auth.expire)); fd.append('token', auth.token);
-    const r = await fetch(`${IK_ENDPOINT}/api/v1/files/upload`, { method: 'POST', body: fd });
-    if (!r.ok) return null;
-    return ((await r.json()) as { url: string }).url;
-  } catch { return null; }
-}
 
 export function AdminQuizzesPage({ token }: { token: string }) {
   const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -46,6 +30,7 @@ export function AdminQuizzesPage({ token }: { token: string }) {
   const [qImageFile, setQImageFile] = useState<File | null>(null);
   const [qImageUrl, setQImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const showFeedback = (msg: string) => { setFeedback(msg); setTimeout(() => setFeedback(null), 3000); };
 
@@ -108,7 +93,22 @@ export function AdminQuizzesPage({ token }: { token: string }) {
   const createQuestion = async () => {
     if (!selectedQuizId || !qText.trim() || qOptions.some((o) => !o.trim())) return;
     let imageUrl: string | null = qImageUrl || null;
-    if (qImageFile) { setUploading(true); imageUrl = await uploadToImageKit(qImageFile, token); setUploading(false); if (!imageUrl) { showFeedback('Erro no upload.'); return; } }
+    if (qImageFile) {
+      const valError = validateImageFile(qImageFile);
+      if (valError) { showFeedback(valError); return; }
+      setUploading(true);
+      setUploadProgress(0);
+      try {
+        imageUrl = await uploadToImageKit(qImageFile, token, setUploadProgress);
+      } catch (err) {
+        showFeedback(err instanceof Error ? err.message : 'Erro no upload.');
+        setUploading(false);
+        setUploadProgress(null);
+        return;
+      }
+      setUploading(false);
+      setUploadProgress(null);
+    }
     await fetch(`${API_URL}/quizzes/${selectedQuizId}/questions`, { method: 'POST', headers: h, body: JSON.stringify({ text: qText, options: qOptions, correctIndex: qCorrect, timeLimitSec: qTime, order: qOrder, imageUrl }) });
     setQText(''); setQOptions(['', '', '', '']); setQCorrect(0); setQTime(20); setQOrder(questions.length + 2); setQImageFile(null); setQImageUrl('');
     await loadQuestions(selectedQuizId); showFeedback('Pergunta adicionada!');
@@ -194,8 +194,16 @@ export function AdminQuizzesPage({ token }: { token: string }) {
             </div>
             <label className="flex flex-col gap-1 text-xs text-quiz-text-muted font-medium">
               Imagem (upload)
-              <input type="file" accept="image/*" className="text-sm text-white" onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)} />
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="text-sm text-white" onChange={(e) => setQImageFile(e.target.files?.[0] ?? null)} />
             </label>
+            {uploadProgress !== null && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full bg-brand rounded-full transition-[width] duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <span className="text-xs font-mono text-quiz-text-muted">{uploadProgress}%</span>
+              </div>
+            )}
             <input className={inputCls} placeholder="Ou URL da imagem: https://..." value={qImageUrl} onChange={(e) => setQImageUrl(e.target.value)} />
             <button type="button" className={btnCls} disabled={uploading || !qText.trim() || qOptions.some((o) => !o.trim())} onClick={() => void createQuestion()}>
               {uploading ? 'Enviando...' : '+ Adicionar pergunta'}

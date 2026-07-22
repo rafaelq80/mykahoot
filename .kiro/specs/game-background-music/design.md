@@ -1,73 +1,77 @@
-# Design — Música de Fundo Durante o Jogo
+# Design: Música de Fundo e Efeitos Sonoros
 
-## Estrutura
+## Arquitetura
 
 ```
-features/background-music/
-  ├── assets/  (referenciadas via import ou /public — decidir por tamanho de bundle)
-  │   ├── lobby-ambient.mp3
-  │   ├── question-tension.mp3
-  │   ├── correct-sting.mp3
-  │   ├── wrong-sting.mp3
-  │   └── podium-celebration.mp3
-  ├── components/
-  │   └── MusicToggle.tsx        # ícone na TopNavBar + popover de volume
-  └── constants.ts                # mapa fase → arquivo
+┌──────────────────────────────────┐       ┌─────────────────────────────┐
+│ Professor (AdminPage)            │       │ Aluno (PlayerPage)          │
+│                                  │       │                             │
+│  useBackgroundMusic(phase, on)   │       │  (sem useBackgroundMusic)   │
+│  ↓                               │       │                             │
+│  HTMLAudioElement (loop, fade)   │       │  ResultPage → playSting()   │
+│  ↓                               │       │  ↓                         │
+│  Speaker / compartilhamento      │       │  HTMLAudioElement (one-shot)│
+│  de tela com a turma             │       │  ↓                         │
+│                                  │       │  Fone/speaker do aluno      │
+└──────────────────────────────────┘       └─────────────────────────────┘
 ```
 
-Arquivos de áudio ficam em `frontend/public/audio/` (servidos estaticamente, fora do
-bundle JS) para não engordar o `main.js` e permitir lazy-load real via `<audio
-src="/audio/lobby-ambient.mp3" preload="none">`.
+## Arquivos estáticos (`frontend/public/audio/`)
 
-## `hooks/useBackgroundMusic.ts`
+| Arquivo | Uso |
+|---|---|
+| `lobby-ambient_01.mp3` | Fase lobby (professor) |
+| `question-tension_01.mp3` | Fase pergunta (professor) |
+| `lobby-ambient_02.mp3` | Fase resultado (professor) |
+| `podium-celebration.mp3` | Fase pódio (professor) |
+| `correct-sting.mp3` | Sting acerto (aluno) |
+| `wrong-sting.mp3` | Sting erro (aluno) |
 
-```ts
-export function useBackgroundMusic() {
-  const musicEnabled = useSettingsStore((s) => s.musicEnabled)
-  const volume = useSettingsStore((s) => s.volume)
-  const status = useGameStore((s) => s.status) // 'lobby' | 'pergunta_ativa' | ...
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+## Componentes e hooks
 
-  useEffect(() => {
-    if (!musicEnabled) { audioRef.current?.pause(); return }
-    const track = trackForStatus(status) // constants.ts
-    crossfadeTo(audioRef, track, volume)  // fade-out atual + fade-in nova, ~400ms
-  }, [status, musicEnabled])
+### `useBackgroundMusic(phase, musicEnabledByAdmin)` — hook
 
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
-  }, [volume])
-}
-```
+- Montado em `AdminPage.tsx` (professor only)
+- Cria `new Audio(trackSrc)`, `audio.loop = true`
+- Fade-in progressivo (400ms, 20 steps)
+- Troca de faixa: pause a anterior, inicia a nova com fade-in
+- Se `play()` falhar: `console.warn`, sem fallback
 
-Chamado uma única vez, no nível de `pages/player/*` (layout comum) e também no
-dashboard do professor, cada lado com seu próprio elemento `<audio>` (não
-compartilham instância, pois são abas/dispositivos diferentes).
+### `playSting(correct, musicEnabledByAdmin)` — função exportada
 
-## `MusicToggle.tsx`
+- Chamada em `ResultPage.tsx` no `useEffect` ao receber resultado
+- Lê `localMuted`/`volume` de `useSettingsStore.getState()`
+- Se `!musicEnabledByAdmin || localMuted`: nada
+- `new Audio(src)`, `audio.volume = volume * 0.8`, `audio.play()`
+- Se falhar: `console.warn`, sem fallback
 
-- Ícone de alto-falante (lucide-react `Volume2`/`VolumeX`) dentro da `TopNavBar`.
-- Clique curto: `useSettingsStore.getState().toggleMusic()`.
-- Popover (shadcn) com um `Slider` (shadcn) ligado a `setVolume`.
+### `AdminMusicControl` — UI do professor
 
-## Efeitos curtos de acerto/erro
+- Botão toggle liga/desliga música global (emite `admin:musica`)
+- Popover com slider de volume local
+- Lê `musicEnabledByAdmin` de `useAdminStore`
 
-`ResultPage` dispara `playSting('correct' | 'wrong')` uma vez ao montar (função
-utilitária que cria um `Audio()` avulso, toca e descarta — não interfere no loop de
-fundo, que continua tocando em volume levemente reduzido durante o efeito, se
-tecnicamente simples de implementar; caso contrário, pausar o loop por ~1.5s e
-retomar).
+### `PlayerVolumeControl` — UI do aluno (no TopNavBar)
 
-## Acessibilidade e boas práticas
+- Botão mute/unmute + slider de volume
+- Afeta apenas o sting (não há música de fundo no aluno)
+- Lê/escreve em `useSettingsStore` (persist localStorage)
 
-- Autoplay nunca é disparado sem interação prévia do usuário (respeita política dos
-  navegadores e evita som inesperado em sala de aula).
-- `motion-reduce`/preferências de acessibilidade não afetam áudio diretamente, mas o
-  toggle deve ter `aria-pressed` refletindo o estado.
+### `useSettingsStore` (Zustand + persist)
 
-## Critérios de aceite
+- `localMuted: boolean` — mudo local (ambos os dispositivos)
+- `volume: number` — 0 a 1
+- Persiste em `localStorage` (key `quizlive-settings`)
 
-- Música começa desligada por padrão; ligar uma vez persiste entre reloads.
-- Trocar de fase do jogo troca a faixa sem corte abrupto perceptível.
-- Nenhuma chamada de áudio bloqueia o clique em `OptionButton` (teste manual: clicar
-  para responder imediatamente após a pergunta aparecer).
+### `constants.ts`
+
+- `MusicPhase`: `'idle' | 'lobby' | 'question' | 'result' | 'podium'`
+- `TRACKS`: mapeamento phase → path do arquivo
+- `STINGS`: `{ correct, wrong }` → paths
+- `FADE_MS`: 400ms
+
+## O que foi removido
+
+- `utils/synthAudio.ts` — sintetizador Web Audio API inteiro (playSynthLoop, playSynthSting, stopAllSynth)
+- Chamada de `useBackgroundMusic` em `PlayerPage.tsx`
+- Todo import de `synthAudio` em `useBackgroundMusic.ts`

@@ -1,95 +1,96 @@
-# Design — Upload de Imagem de Pergunta via ImageKit
+# Design — Upload de Imagem via ImageKit
 
-## Backend (já existente, sem mudança estrutural)
+## Arquitetura real (implementada)
 
-`GET /imagekit/auth` → `{ signature, expire, token }`, usando `IMAGEKIT_PRIVATE_KEY`
-do `.env`. Único ajuste desta spec: garantir que o endpoint exija o JWT do professor
-(`@UseGuards(JwtGuard)`) para não permitir upload anônimo — conferir se já está
-protegido e, se não estiver, adicionar.
+### Backend
 
-## Frontend
-
-### `services/imagekit.ts`
-
-```ts
-export async function uploadQuestionImage(
-  file: File,
-  onProgress?: (percent: number) => void,
-): Promise<string> {
-  const authRes = await api.get('/imagekit/auth')
-  const { signature, expire, token } = authRes.data
-
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('fileName', file.name)
-  formData.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY)
-  formData.append('signature', signature)
-  formData.append('expire', expire)
-  formData.append('token', token)
-  formData.append('folder', '/mykahoot/questions')
-
-  const res = await axios.post(
-    'https://upload.imagekit.io/api/v1/files/upload',
-    formData,
-    { onUploadProgress: (e) => onProgress?.(Math.round((e.loaded / (e.total ?? 1)) * 100)) },
-  )
-  return res.data.url as string
-}
+```
+GET /imagekit/auth  →  ImageKitController (QuizModule)
+                       @UseGuards(JwtAuthGuard)
+                       ↓
+                       ImageKit SDK (@imagekit/nodejs)
+                       .helper.getAuthenticationParameters()
+                       ↓
+                       { signature, expire, token }
 ```
 
-### `schemas/question.schema.ts` — validação de arquivo (client-side, antes do upload)
+- Controller: `backend/src/quiz/imagekit.controller.ts`
+- Registrado em: `QuizModule` (quiz.module.ts)
+- SDK: instanciado com privateKey de process.env
+- Se env vars ausentes: `this.imagekit = null` → endpoint retorna 503
 
-```ts
-export const imageFileSchema = z
-  .instanceof(File)
-  .refine((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type), 'Formato inválido')
-  .refine((f) => f.size <= 5 * 1024 * 1024, 'Máximo 5MB')
+### Frontend — Fluxo de upload
+
+```
+1. Professor seleciona arquivo no input[type=file]
+2. Frontend chama GET /imagekit/auth (com Bearer token)
+3. Recebe { token, expire, signature }
+4. Monta FormData:
+   - file: File selecionado
+   - fileName: file.name
+   - publicKey: VITE_IMAGEKIT_PUBLIC_KEY
+   - signature, expire, token: do passo 3
+5. POST para {VITE_IMAGEKIT_URL_ENDPOINT}/api/v1/files/upload
+6. Resposta: { url: "https://ik.imagekit.io/..." }
+7. URL é salva como imageUrl do Quiz ou Question via PATCH/POST
 ```
 
-Este schema valida o `File` **antes** de chamar `uploadQuestionImage` — não faz parte
-do `questionSchema` principal (que valida o formulário final, cujo campo é
-`imageUrl: string`, não o arquivo).
+### Implementação atual (inline, duplicada)
 
-### `features/quiz-editor/components/ImageUploadField.tsx`
+A função `uploadToImageKit(file: File, token: string): Promise<string | null>` está
+implementada identicamente em:
+- `frontend/src/pages/AdminQuizzesPage.tsx` (upload de imagem de pergunta na criação)
+- `frontend/src/features/admin-control/components/EditQuizPage.tsx` (upload de imagem do quiz na edição)
 
-Componente controlado fora do RHF (arquivo não é um valor de formulário sério até
-virar URL):
+Não existe componente isolado `ImageUploadField` nem serviço centralizado — o upload
+é feito inline dentro de cada formulário.
 
-```tsx
-function ImageUploadField({ value, onChange }: { value?: string; onChange: (url?: string) => void }) {
-  const [progress, setProgress] = useState<number | null>(null)
+### Onde `imageUrl` é persistido
 
-  async function handleFileSelect(file: File) {
-    const parsed = imageFileSchema.safeParse(file)
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return }
-    setProgress(0)
-    try {
-      const url = await uploadQuestionImage(file, setProgress)
-      onChange(url)
-    } catch {
-      toast.error('Falha ao enviar imagem. Tente novamente.')
-    } finally {
-      setProgress(null)
-    }
-  }
+| Entidade   | Coluna     | Tipo            | Uso                               |
+|------------|-----------|-----------------|-----------------------------------|
+| Quiz       | imageUrl  | varchar, null   | Capa do quiz (card na lista)      |
+| Question   | imageUrl  | varchar, null   | Imagem exibida durante a pergunta |
 
-  return (
-    <div>
-      {value && <img src={value} className="rounded-lg" /* preview */ />}
-      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])} disabled={progress !== null} />
-      {progress !== null && <Progress value={progress} />}
-      {value && <Button variant="ghost" onClick={() => onChange(undefined)}>Remover imagem</Button>}
-    </div>
-  )
-}
-```
+### Variáveis de ambiente envolvidas
 
-`QuestionForm` usa `<Controller name="imageUrl" control={form.control} render={({ field }) => <ImageUploadField value={field.value} onChange={field.onChange} />} />` para integrar ao RHF sem forçar o `File` a passar pelo schema principal.
+**Backend** (nunca expostas ao frontend):
+- `IMAGEKIT_PRIVATE_KEY` — assina os parâmetros de upload
+- `IMAGEKIT_PUBLIC_KEY` — usada só para validação interna
+- `IMAGEKIT_URL_ENDPOINT` — base URL do ImageKit
+
+**Frontend** (públicas, no bundle):
+- `VITE_IMAGEKIT_PUBLIC_KEY` — enviada no FormData de upload
+- `VITE_IMAGEKIT_URL_ENDPOINT` — base URL para POST de upload
+
+## Arquitetura alvo (pendente)
+
+### `services/imagekit.ts` — função centralizada
+
+Extrair `uploadToImageKit` para um módulo reutilizável, eliminando duplicação.
+Pode adicionar validação de tipo/tamanho antes do upload e reportar progresso.
+
+### `ImageUploadField.tsx` — componente reutilizável
+
+- Preview da imagem atual
+- Input file com accept restrito
+- Barra de progresso durante upload
+- Botão de remover imagem
+- Integrável via RHF `Controller` quando RHF for adotado
+
+### Validação client-side
+
+Antes de iniciar o upload:
+- Tipo: `image/jpeg`, `image/png`, `image/webp`
+- Tamanho: ≤ 5 MB
+- Feedback imediato se inválido (toast/mensagem inline)
 
 ## Critérios de aceite
 
-- Upload nunca passa pelo backend do MyKahoot (só a assinatura passa).
-- Arquivo > 5MB ou de tipo inválido é rejeitado antes de qualquer chamada de rede de
-  upload.
-- `GET /imagekit/auth` exige autenticação de professor.
-- Submeter o formulário com upload em andamento é bloqueado (botão desabilitado).
+- ✅ Upload nunca passa pelo backend (só a assinatura)
+- ✅ `GET /imagekit/auth` exige JWT
+- ✅ Funciona end-to-end em produção
+- ❌ Sem validação de tipo/tamanho antes do upload
+- ❌ Sem barra de progresso
+- ❌ Código duplicado em dois arquivos
+- ❌ Sem botão de remover imagem

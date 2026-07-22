@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { getSocket } from '../../../hooks/useSocket';
-import { useGameStore } from '../../../stores/useGameStore';
+import { useGameStore, getLastJoinInfo, setLastJoinInfo, clearLastJoinInfo } from '../../../stores/useGameStore';
 import type {
   GameEstadoEvent,
   GamePerguntaEvent,
@@ -11,6 +11,10 @@ import type {
 /**
  * Registers all socket event listeners for the player flow and wires
  * them to the game store. Mount once at the player app entry point.
+ *
+ * Also handles auto-rejoin: when the room transitions to 'lobby' and
+ * lastJoinInfo exists in sessionStorage, automatically emits player:entrar
+ * without requiring user interaction.
  */
 export function usePlayerSocket() {
   const setScreen = useGameStore((s) => s.setScreen);
@@ -35,15 +39,37 @@ export function usePlayerSocket() {
       setErrorMessage('Conexão perdida. Reconectando...');
     };
 
-    const onGameEstado = (data: GameEstadoEvent) => handleEstado(data);
+    const onGameEstado = (data: GameEstadoEvent) => {
+      handleEstado(data);
+
+      // Auto-rejoin: if room just became lobby and we have lastJoinInfo
+      if (data.status === 'lobby') {
+        const state = useGameStore.getState();
+        const lastJoin = getLastJoinInfo();
+        if (lastJoin && !state.playerInfo && !state.joinPending) {
+          // Trigger auto-rejoin
+          useGameStore.setState({ joinPending: true });
+          socket.emit('player:entrar', {
+            turmaId: lastJoin.turmaId,
+            alunoId: lastJoin.alunoId,
+            avatar: lastJoin.avatar,
+          });
+        }
+      }
+    };
+
     const onGamePergunta = (data: GamePerguntaEvent) => handlePergunta(data);
     const onGameResultado = (data: GameResultadoPerguntaEvent) => handleResultado(data);
     const onGameFim = (data: GameFimEvent) => handleFim(data);
+
     const onGameErro = (data: { message: string }) => {
-      const pending = useGameStore.getState().joinPending;
-      if (pending) {
+      const state = useGameStore.getState();
+      if (state.joinPending) {
+        // Auto-rejoin failed — clear lastJoinInfo and fall back to manual
+        clearLastJoinInfo();
         setPlayerInfo(null);
         setJoinPending(false);
+        setScreen('entry');
       }
       setErrorMessage(data.message);
     };
@@ -51,7 +77,7 @@ export function usePlayerSocket() {
     const onMusica = (data: { enabled: boolean }) =>
       useGameStore.getState().setMusicEnabledByAdmin(data.enabled);
 
-    // Professor ended the room (before or during the game) — send everyone back to the entry screen
+    // Professor ended the room — send everyone back to entry
     const onSalaEncerrada = () => {
       setScreen('entry');
       setErrorMessage('A sala foi encerrada pelo professor.');

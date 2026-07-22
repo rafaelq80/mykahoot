@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { cn } from '../../../lib/utils';
+import { uploadToImageKit, validateImageFile } from '../../../services/imagekit';
 import { AdminScreenLayout } from './AdminScreenLayout';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const IK_PUBLIC_KEY = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ?? '';
-const IK_ENDPOINT = import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT ?? '';
 
 interface Theme {
   id: string;
@@ -34,28 +33,6 @@ interface Props {
   onSaved: () => void;
 }
 
-async function uploadToImageKit(file: File, token: string): Promise<string | null> {
-  try {
-    const authRes = await fetch(`${API_URL}/imagekit/auth`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!authRes.ok) return null;
-    const auth = (await authRes.json()) as { token: string; expire: number; signature: string };
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('fileName', file.name);
-    fd.append('publicKey', IK_PUBLIC_KEY);
-    fd.append('signature', auth.signature);
-    fd.append('expire', String(auth.expire));
-    fd.append('token', auth.token);
-    const r = await fetch(`${IK_ENDPOINT}/api/v1/files/upload`, { method: 'POST', body: fd });
-    if (!r.ok) return null;
-    return ((await r.json()) as { url: string }).url;
-  } catch {
-    return null;
-  }
-}
-
 export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
   const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
@@ -65,6 +42,7 @@ export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [savingQuiz, setSavingQuiz] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [quizImageFile, setQuizImageFile] = useState<File | null>(null);
   const [newQ, setNewQ] = useState({
     text: '',
@@ -114,13 +92,23 @@ export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
     try {
       let imageUrl = quiz.imageUrl;
       if (quizImageFile) {
-        const uploaded = await uploadToImageKit(quizImageFile, token);
-        if (!uploaded) {
-          showFeedback('Erro no upload da imagem.');
+        // Validate before upload
+        const valError = validateImageFile(quizImageFile);
+        if (valError) {
+          showFeedback(valError);
           setSavingQuiz(false);
           return;
         }
-        imageUrl = uploaded;
+        setUploadProgress(0);
+        try {
+          imageUrl = await uploadToImageKit(quizImageFile, token, setUploadProgress);
+        } catch (uploadErr) {
+          showFeedback(uploadErr instanceof Error ? uploadErr.message : 'Erro no upload da imagem.');
+          setSavingQuiz(false);
+          setUploadProgress(null);
+          return;
+        }
+        setUploadProgress(null);
       }
       const body: Record<string, unknown> = { title: quiz.title, themeId: quiz.themeId };
       if (imageUrl) body.imageUrl = imageUrl;
@@ -134,6 +122,7 @@ export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
       showFeedback('Erro ao salvar.');
     } finally {
       setSavingQuiz(false);
+      setUploadProgress(null);
     }
   };
 
@@ -248,12 +237,23 @@ export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
                   Imagem do quiz
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     className="text-sm text-white"
                     onChange={(e) => setQuizImageFile(e.target.files?.[0] ?? null)}
                   />
                 </label>
               </div>
+              {uploadProgress !== null && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-brand rounded-full transition-[width] duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-mono text-quiz-text-muted">{uploadProgress}%</span>
+                </div>
+              )}
               <button
                 type="button"
                 className={cn(btnCls, 'self-start')}

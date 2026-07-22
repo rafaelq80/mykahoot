@@ -1,51 +1,69 @@
-# Requirements — Upload de Imagem de Pergunta via ImageKit
+# Requirements — Upload de Imagem via ImageKit
 
 ## Contexto
 
-O backend já expõe `GET /imagekit/auth` (`backend/src/quiz/imagekit.controller.ts`)
-retornando os parâmetros de assinatura para upload client-side. Falta o consumo
-correto no frontend, integrado ao formulário de pergunta (RHF + Zod) e ao novo
-design system.
+O upload de imagens (para quizzes e perguntas) já funciona em produção via ImageKit.
+O backend gera parâmetros de assinatura (`GET /imagekit/auth`, protegido por JWT) e
+o frontend faz o upload direto para o CDN do ImageKit sem que o binário passe pelo
+servidor. Esta spec documenta o fluxo real e identifica melhorias pendentes.
 
-## Requisitos
+## Requisitos Funcionais (implementados)
 
-### R1 — Upload client-side assinado
+### RF-1: Endpoint de autenticação assinada (Backend)
 
-- QUANDO o professor selecionar um arquivo de imagem no `QuestionForm`, O SISTEMA
-  DEVE buscar os parâmetros de assinatura em `GET /imagekit/auth` e enviar o arquivo
-  diretamente para o ImageKit a partir do navegador (o backend nunca recebe o
-  binário da imagem).
-- QUANDO o upload terminar com sucesso, O SISTEMA DEVE preencher o campo `imageUrl`
-  do formulário com a URL retornada pelo ImageKit.
+- O backend expõe `GET /imagekit/auth` retornando `{ signature, expire, token }`.
+- O endpoint é protegido por `@UseGuards(JwtAuthGuard)` — apenas o professor
+  autenticado pode gerar credenciais de upload.
+- Se as variáveis de ambiente do ImageKit não estiverem configuradas, o endpoint
+  retorna 503 com mensagem clara.
 
-### R2 — Validação de arquivo
+### RF-2: Upload client-side direto para ImageKit
 
-- O SISTEMA DEVE aceitar apenas arquivos `image/jpeg`, `image/png`, `image/webp`.
-- O SISTEMA DEVE rejeitar arquivos maiores que 5 MB, com mensagem clara antes de
-  iniciar o upload (não depois de já ter enviado).
+- O frontend obtém os parâmetros de assinatura via `GET /imagekit/auth` (com JWT).
+- Monta um `FormData` com: `file`, `fileName`, `publicKey` (de
+  `VITE_IMAGEKIT_PUBLIC_KEY`), `signature`, `expire`, `token`.
+- Faz POST direto para `{VITE_IMAGEKIT_URL_ENDPOINT}/api/v1/files/upload`.
+- Recebe a URL final da imagem hospedada no CDN do ImageKit.
 
-### R3 — Feedback de progresso e erro
+### RF-3: Imagem associada a Quiz e Question
 
-- ENQUANTO o upload estiver em andamento, O SISTEMA DEVE exibir uma barra/indicador
-  de progresso e desabilitar o submit do formulário de pergunta.
-- SE o upload falhar (rede, erro do ImageKit, credenciais ausentes — o backend já
-  retorna 503 nesse caso), ENTÃO O SISTEMA DEVE exibir um toast de erro claro e
-  permitir nova tentativa sem perder o restante dos dados do formulário.
+- `Quiz.imageUrl` (nullable): imagem de capa do quiz, editável na `EditQuizPage`.
+- `Question.imageUrl` (nullable): imagem da pergunta, definida na criação/edição.
+- Ambas armazenam a URL do ImageKit retornada após upload bem-sucedido.
 
-### R4 — Preview e substituição
+### RF-4: Preview de imagem existente
 
-- QUANDO uma imagem já estiver associada à pergunta (edição), O SISTEMA DEVE exibir
-  o preview atual antes de qualquer novo upload.
-- O SISTEMA DEVE permitir remover a imagem atual (campo `imageUrl` volta a
-  `undefined`) sem exigir escolher uma nova.
+- Na `EditQuizPage`, se o quiz já possui `imageUrl`, um thumbnail é exibido antes
+  de qualquer novo upload.
 
-### R5 — Segurança
+### RF-5: Segurança
 
-- O SISTEMA NÃO DEVE expor `IMAGEKIT_PRIVATE_KEY` em nenhum artefato do frontend —
-  ela existe apenas em `backend/.env` e é usada só para gerar os parâmetros de
-  assinatura.
+- `IMAGEKIT_PRIVATE_KEY` existe apenas em `backend/.env`, nunca exposta no frontend.
+- O frontend usa apenas `VITE_IMAGEKIT_PUBLIC_KEY` e `VITE_IMAGEKIT_URL_ENDPOINT`.
+
+## Requisitos pendentes (não implementados)
+
+### RF-6: Validação de arquivo antes do upload
+
+- O sistema DEVE aceitar apenas `image/jpeg`, `image/png`, `image/webp`.
+- O sistema DEVE rejeitar arquivos > 5 MB com mensagem clara antes de iniciar o upload.
+
+### RF-7: Feedback de progresso
+
+- Durante o upload, uma barra de progresso deve ser exibida e o botão de submit
+  desabilitado.
+
+### RF-8: Componente reutilizável
+
+- A lógica de upload deve ser extraída para um componente/serviço centralizado,
+  eliminando a duplicação atual entre `AdminQuizzesPage` e `EditQuizPage`.
+
+### RF-9: Remoção de imagem
+
+- O sistema deve permitir remover a imagem associada (campo `imageUrl` volta a null)
+  sem exigir upload de uma nova.
 
 ## Fora de escopo
 
-- Edição de imagem (crop/resize) no cliente — upload é do arquivo original.
+- Edição de imagem (crop/resize) no cliente.
 - Galeria de imagens reaproveitáveis entre perguntas.

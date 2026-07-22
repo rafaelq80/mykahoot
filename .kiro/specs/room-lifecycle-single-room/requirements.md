@@ -1,65 +1,111 @@
-# Requirements — Sala Única com Gate de Entrada
+# Requirements: Sala Única — Ciclo de Vida
 
-## Contexto
+## Introdução
 
-O sistema já impede entrada de jogador fora do status `lobby`
-(`backend/src/game/game.gateway.ts`, handler `player:entrar`), mas isso hoje é um
-efeito colateral do fluxo de seleção de quiz (`admin:selecionarTema`), não uma ação
-explícita e nomeada de "abrir sala". Também não existe hoje um evento que force a
-saída de todos os jogadores quando o professor decide interromper a sessão antes do
-fim do jogo. Esta spec formaliza as duas pontas: abertura/fechamento explícitos da
-sala pelo professor, e a experiência de espera/expulsão do aluno.
+Existe apenas uma sala de jogo ativa por vez no sistema. O professor abre a sala
+para um quiz, alunos entram, o jogo acontece, e ao final (ou por encerramento
+forçado) a sala volta ao estado inativo. Esta spec documenta todas as regras de
+transição de estado, controle de entrada e encerramento.
 
-## Requisitos
+## Estados possíveis (`GameStatus`)
 
-### R1 — Abertura explícita da sala
+| Estado                | Significado                                              |
+|-----------------------|----------------------------------------------------------|
+| `inativo`             | Nenhuma sala aberta. Sistema em repouso.                |
+| `lobby`               | Sala aberta, aguardando jogadores e/ou início do jogo.  |
+| `pergunta_ativa`      | Uma pergunta foi liberada e o timer está rodando.       |
+| `mostrando_resultado` | Resultado da pergunta sendo exibido, aguardando avanço. |
+| `finalizado`          | Jogo encerrado normalmente (todas as perguntas feitas). |
 
-- QUANDO o professor selecionar um quiz e confirmar "Abrir Sala", O SISTEMA DEVE
-  emitir `admin:abrirSala` com o `quizId`, criar a `GameSession` no banco, definir
-  `status = 'lobby'` e permitir a entrada de jogadores a partir desse momento.
-- ENQUANTO não houver uma sala aberta (`status` fora de `lobby` a
-  `mostrando_resultado`/`finalizado` de uma sessão em andamento), O SISTEMA DEVE
-  rejeitar `player:entrar` com uma mensagem clara de "sala fechada".
+## Requisitos Funcionais
 
-### R2 — Tela de espera do aluno
+### RF-1: Apenas uma sala por vez
 
-- QUANDO um aluno acessar a aplicação e a sala estiver fechada, O SISTEMA DEVE exibir
-  uma tela de espera ("Aguarde o professor abrir a sala") em vez do formulário de
-  nickname/avatar.
-- ENQUANTO a tela de espera estiver visível, O SISTEMA DEVE verificar
-  periodicamente/reativamente (via evento de socket `game:salaStatus`, não polling
-  HTTP) se a sala abriu, e QUANDO abrir, O SISTEMA DEVE liberar automaticamente o
-  formulário de entrada, sem exigir reload da página.
+- QUANDO o professor tentar abrir uma sala (`admin:selecionarTema`) e já existir
+  uma partida ativa (`status !== 'inativo'`), O SISTEMA DEVE rejeitar com erro
+  `ConflictException` e mensagem clara.
 
-### R3 — Fechamento explícito e expulsão
+### RF-2: Abertura de sala
 
-- QUANDO o professor confirmar "Fechar Sala" (em um diálogo de confirmação, por ser
-  destrutivo), O SISTEMA DEVE emitir `admin:fecharSala`, o backend DEVE marcar a
-  `GameSession` como `interrompida` (se o jogo não havia terminado) ou manter
-  `finalizado` (se já havia terminado normalmente), desconectar/expulsar todos os
-  sockets na room `players`, e resetar o estado em memória (`GameStateService`).
-- QUANDO um jogador for expulso por fechamento de sala, O SISTEMA DEVE emitir
-  `game:salaFechada` com um motivo (`admin_fechou`), e o cliente DEVE redirecionar o
-  aluno para a tela inicial exibindo uma mensagem explicando que o professor encerrou
-  a sessão.
+- QUANDO o professor emite `admin:selecionarTema { quizId }`:
+  - Cria `GameSession` no banco com `status: 'em_andamento'`
+  - Carrega perguntas do quiz em memória
+  - Transiciona estado para `lobby`
+  - Emite `game:estado { status: 'lobby' }` em broadcast para todos os clientes
 
-### R4 — Sala única (não simultânea)
+### RF-3: Entrada de aluno (gate)
 
-- SE o professor tentar abrir uma nova sala enquanto outra já está com `status`
-  diferente de `inativo`/`finalizado`/`interrompida`, ENTÃO O SISTEMA DEVE bloquear a
-  ação e exibir um aviso ("Encerre a sala atual antes de abrir uma nova"), pois só
-  pode existir uma sessão de jogo ativa no processo.
+- QUANDO um aluno tenta entrar (`player:entrar`) com sala em `lobby`:
+  - Valida `{ turmaId, alunoId, avatar }` via `AlunoService.findAlunoInTurma`
+  - Cria `PlayerResult` no banco vinculado ao aluno/turma
+  - Adiciona jogador ao estado em memória (impede duplicidade por `alunoId`)
+  - Emite `game:estado` atualizado
+- QUANDO a sala NÃO está em `lobby`, o aluno recebe `game:erro` e não entra.
 
-### R5 — Reconexão
+### RF-4: Estado inicial ao conectar
 
-- SE um aluno perder a conexão de socket temporariamente enquanto a sala está aberta
-  e reconectar antes do fim da pergunta atual, O SISTEMA DEVE preservar seu
-  comportamento atual (já implementado em `game.gateway.ts` para desconexão durante
-  `pergunta_ativa`) — esta spec não altera essa lógica, só a formaliza como não
-  regressão.
+- QUANDO qualquer cliente se conecta via WebSocket, O SISTEMA DEVE emitir
+  imediatamente `game:estado` com o status atual da sala, para que o frontend
+  saiba se deve exibir tela de entrada, lobby ou aguardar.
 
-## Fora de escopo
+### RF-5: Encerramento forçado da sala (`admin:encerrarSala`)
 
-- Múltiplas salas simultâneas.
-- Reconexão automática do professor ao dashboard após fechar o navegador (ele
-  reautentica normalmente).
+- QUANDO o professor emite `admin:encerrarSala`:
+  - Cancela o timer da pergunta ativa (se houver)
+  - Atualiza `GameSession.status` para `'interrompida'` no banco (se sessão existe)
+  - Emite `game:salaEncerrada` para a sala `players` — o frontend redireciona
+    todos os alunos para a tela de entrada com mensagem "A sala foi encerrada
+    pelo professor"
+  - Reseta todo o estado em memória para `inativo`
+  - Emite `game:estado { status: 'inativo' }` em broadcast
+
+### RF-6: Finalização normal (`admin:finalizarJogo`)
+
+- QUANDO o professor emite `admin:finalizarJogo` (disponível durante
+  `pergunta_ativa` ou `mostrando_resultado`):
+  - Se em `pergunta_ativa`: processa o resultado da pergunta atual primeiro
+  - Transiciona para `finalizado`
+  - Emite ranking final (`game:fim` para jogadores, `admin:fim` para admin)
+
+### RF-7: Avanço automático na última pergunta
+
+- QUANDO `admin:proximaPergunta` é chamado e não há mais perguntas, o sistema
+  aciona `_finalizarJogo` automaticamente (transição para `finalizado`).
+
+### RF-8: Recuperação de sessões interrompidas no startup
+
+- QUANDO o backend inicia (`onModuleInit` em `GameResultsService`), O SISTEMA
+  DEVE encontrar todas as `GameSession` com `status = 'em_andamento'` e
+  atualizar para `'interrompida'` — garantindo que reinícios não deixem
+  sessões "fantasma" no banco.
+
+### RF-9: Desconexão de jogador durante partida
+
+- QUANDO um jogador desconecta durante `pergunta_ativa`:
+  - É removido do estado em memória
+  - Se todos os jogadores restantes já responderam, aciona o resultado antecipado
+
+### RF-10: Retry automático ao reabrir sala
+
+- QUANDO o aluno já entrou manualmente uma vez nesta sessão de navegador (dados
+  salvos em `sessionStorage` como `lastJoinInfo: { turmaId, alunoId, avatar }`)
+  E a sala transiciona para `lobby`, O SISTEMA DEVE automaticamente emitir
+  `player:entrar` com os dados salvos, sem exigir ação do aluno.
+- ENQUANTO o auto-rejoin estiver em andamento, O SISTEMA DEVE exibir uma tela
+  de carregamento ("Reentrando na sala...") em vez do formulário de entrada.
+- SE o auto-rejoin falhar (aluno removido da turma, erro no backend), O SISTEMA
+  DEVE limpar `lastJoinInfo`, voltar ao formulário manual e exibir a mensagem
+  de erro do backend.
+- SE o aluno nunca entrou nesta aba/sessão (não há `lastJoinInfo`), o fluxo
+  continua manual como antes.
+- `lastJoinInfo` é salvo em `sessionStorage` (não `localStorage`) — sobrevive a
+  refresh da página mas não persiste entre sessões de navegador, evitando
+  auto-joins stale depois de dias.
+
+## Requisitos Não-Funcionais
+
+- O estado em memória (`GameStateService`) é singleton — uma instância por
+  processo. Isso não escala horizontalmente sem sticky sessions, mas está
+  dentro do escopo do MVP (sala única por servidor).
+- Toda transição de estado emite `game:estado` broadcast + `admin:estado` para
+  a sala `admins`, mantendo todos os clientes sincronizados.

@@ -30,8 +30,11 @@ Existe **apenas uma sala de jogo ativa por vez** no sistema (não é multi-tenan
   sala"**, com retry automático (poll leve ou evento de socket) para liberar assim que
   a sala abrir.
 - Se o professor **fechar a sala** (ou encerrar o jogo) enquanto há alunos conectados,
-  todos são desconectados imediatamente e redirecionados para a tela inicial com uma
-  mensagem clara de que a sessão foi encerrada pelo professor.
+  o servidor emite `game:salaEncerrada` para todos os jogadores — o frontend
+  redireciona cada aluno para a tela inicial com uma mensagem clara de que a sessão
+  foi encerrada pelo professor. Os sockets permanecem conectados (recebem o
+  subsequente `game:estado { status: 'inativo' }`), mas a experiência do usuário é
+  equivalente a uma desconexão: todos são forçados de volta ao início.
 - Essa regra é o motivo de a spec `room-lifecycle-single-room` existir separada do
   restante do fluxo de jogo — veja `.kiro/specs/room-lifecycle-single-room/`.
 
@@ -58,3 +61,12 @@ Em relação à v1 (gerada inicialmente pelo Kiro, hoje em `git log`), esta evol
 - Multi-sala / múltiplos professores simultâneos.
 - Autenticação de aluno persistente (contas de aluno).
 - App mobile nativo (o mobile é atendido via web responsiva).
+
+## Gestão de Turmas e Alunos
+
+O professor cadastra turmas e alunos antes do jogo. Na hora da partida, o aluno
+se identifica selecionando sua turma e seu nome (não mais texto livre) — o sistema
+valida pertencimento (`aluno.turmaId === turmaId`) antes de permitir a entrada.
+Resultados de cada partida (`PlayerResult`) ficam vinculados ao aluno e à turma,
+permitindo relatórios históricos de desempenho individual e por turma ao longo do
+tempo. Ver spec `.kiro/specs/aluno-turma-management/`.

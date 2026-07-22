@@ -3,93 +3,123 @@ title: Project Structure
 inclusion: always
 ---
 
-# Estrutura de Pastas Alvo
+# Estrutura de Pastas
 
-A estrutura abaixo é o **alvo** desta evolução. Ela substitui o layout "tudo em
-`pages/`" da v1. Ao gerar código, sempre criar/mover arquivos para os locais corretos
-abaixo — não acumular lógica em componentes de página.
+## Estado atual (reflete o repositório real)
 
 ```
 /
 ├── backend/
 │   ├── src/
+│   │   ├── admin/                 # AdminModule (auth JWT, entidade Admin)
+│   │   │   ├── entities/admin.entity.ts
+│   │   │   ├── dto/
+│   │   │   ├── admin.controller.ts
+│   │   │   ├── admin.module.ts
+│   │   │   ├── admin.service.ts
+│   │   │   ├── jwt.guard.ts
+│   │   │   └── jwt.strategy.ts
 │   │   ├── theme/                 # ThemeModule (CRUD de temas)
-│   │   ├── quiz/                  # QuizModule (CRUD de quiz/pergunta + imagekit)
-│   │   ├── game/                  # GameModule
-│   │   │   ├── game.gateway.ts        # Fino: só (de)serializa eventos e chama services
-│   │   │   ├── game-state.service.ts  # Estado em memória da sala única
-│   │   │   ├── game-room.service.ts   # NOVO: abrir/fechar sala, gate de entrada
+│   │   │   ├── entities/theme.entity.ts
+│   │   │   ├── dto/
+│   │   │   ├── theme.controller.ts
+│   │   │   ├── theme.module.ts
+│   │   │   └── theme.service.ts
+│   │   ├── quiz/                  # QuizModule (CRUD quiz/pergunta + ImageKit)
+│   │   │   ├── entities/quiz.entity.ts, question.entity.ts
+│   │   │   ├── dto/
+│   │   │   ├── quiz.controller.ts
+│   │   │   ├── imagekit.controller.ts
+│   │   │   ├── quiz.module.ts
+│   │   │   └── quiz.service.ts
+│   │   ├── turma/                 # TurmaModule (CRUD de turmas)
+│   │   │   ├── entities/turma.entity.ts
+│   │   │   ├── dto/
+│   │   │   ├── turma.controller.ts
+│   │   │   ├── turma.module.ts
+│   │   │   └── turma.service.ts
+│   │   ├── aluno/                 # AlunoModule (CRUD de alunos por turma)
+│   │   │   ├── entities/aluno.entity.ts
+│   │   │   ├── dto/
+│   │   │   ├── aluno.controller.ts
+│   │   │   ├── aluno.module.ts
+│   │   │   └── aluno.service.ts
+│   │   ├── game/                  # GameModule (sala de jogo ao vivo)
+│   │   │   ├── entities/game-session.entity.ts, player-result.entity.ts
+│   │   │   ├── game.gateway.ts
+│   │   │   ├── game-state.service.ts
 │   │   │   ├── game-results.service.ts
-│   │   │   └── game.types.ts          # Fonte de verdade dos contratos de evento
-│   │   ├── admin/                 # AdminModule (auth JWT)
-│   │   └── prisma/                # PrismaService
-│   ├── prisma/schema.prisma
+│   │   │   ├── game.module.ts
+│   │   │   └── game.types.ts
+│   │   ├── database/              # DatabaseModule (@Global, TypeORM config)
+│   │   │   ├── data-source.ts        # DataSource para CLI de migrations
+│   │   │   ├── database.module.ts     # TypeOrmModule.forRootAsync + forFeature
+│   │   │   └── migrations/           # Arquivos de migration TS
+│   │   ├── app.module.ts
+│   │   └── main.ts
+│   ├── MIGRATION_NOTES.md         # Racional da migração Prisma → TypeORM
+│   ├── render.yaml                # Deploy config para Render (backend)
 │   └── .env
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                   # Bootstrap: main.tsx, App.tsx, router
-│   │   ├── pages/                 # Componentes de ROTA — finos, só compõem
-│   │   │   ├── player/
+│   │   ├── pages/                 # Componentes de ROTA
+│   │   │   ├── player/            # Sub-pages do aluno
 │   │   │   │   ├── JoinRoomPage.tsx
 │   │   │   │   ├── LobbyPage.tsx
 │   │   │   │   ├── QuestionPage.tsx
 │   │   │   │   ├── ResultPage.tsx
 │   │   │   │   └── PodiumPage.tsx
-│   │   │   └── admin/
-│   │   │       ├── AdminLoginPage.tsx
-│   │   │       ├── AdminDashboardPage.tsx
-│   │   │       ├── AdminQuizzesPage.tsx
-│   │   │       └── AdminHistoricoPage.tsx
-│   │   ├── features/              # Lógica de domínio por feature (UI + hooks locais)
-│   │   │   ├── player-session/    #   avatar picker, nickname form, join-gate
-│   │   │   ├── question-flow/     #   grid de alternativas, timer, progress bar
-│   │   │   ├── ranking/           #   podium, ranking row, ranking list
-│   │   │   ├── quiz-editor/       #   form de quiz/pergunta, upload de imagem
-│   │   │   ├── admin-control/     #   painel de controle de partida do professor
-│   │   │   └── background-music/ #   player de música + toggle
-│   │   ├── components/ui/         # shadcn/ui (gerado, não editar à mão)
-│   │   ├── components/shared/     # Componentes puros reutilizáveis entre features
-│   │   │   (AvatarBadge, ScorePill, OptionButton, TimerDisplay, ProgressBar, RankingRow)
-│   │   ├── hooks/                 # Hooks técnicos e transversais
-│   │   │   ├── useSocket.ts           # Singleton de conexão Socket.io
-│   │   │   ├── useBackgroundMusic.ts
-│   │   │   └── useCountdown.ts
-│   │   ├── stores/                # Zustand
-│   │   │   ├── useGameStore.ts        # Estado de jogo do aluno
-│   │   │   ├── useAdminStore.ts       # Estado do painel do professor
-│   │   │   ├── useRoomStore.ts        # Estado de sala aberta/fechada (NOVO)
-│   │   │   └── useSettingsStore.ts    # Preferência de música, volume
-│   │   ├── schemas/               # Zod schemas (form + validação de payload de socket)
-│   │   ├── services/              # Clientes HTTP (api.ts, imagekit.ts)
-│   │   ├── types/                 # Tipos TS compartilhados (events.ts espelha o backend)
-│   │   ├── styles/                # globals.css (camadas Tailwind) + fonts
-│   │   └── lib/                   # utils.ts (cn(), formatters)
+│   │   │   ├── AdminPage.tsx          # Container c/ nav + tabs
+│   │   │   ├── AdminLoginPage.tsx
+│   │   │   ├── AdminDashboardPage.tsx
+│   │   │   ├── AdminQuizzesPage.tsx
+│   │   │   ├── AdminHistoricoPage.tsx
+│   │   │   ├── AdminTurmasPage.tsx
+│   │   │   └── PlayerPage.tsx         # Orquestrador do fluxo do aluno
+│   │   ├── features/              # Lógica de domínio por feature
+│   │   │   ├── player-session/    #   JoinRoomForm, usePlayerSocket
+│   │   │   ├── question-flow/     #   QuestionView
+│   │   │   ├── ranking/           #   QuestionResultView, PodiumView
+│   │   │   └── admin-control/     #   WaitingRoomPanel, QuestionControlPanel, etc.
+│   │   ├── components/shared/     # Puros: AvatarBadge, OptionButton, TimerDisplay, etc.
+│   │   ├── hooks/                 # Hooks técnicos (useSocket, useCountdown)
+│   │   ├── stores/                # Zustand (useGameStore, useAdminStore)
+│   │   ├── types/                 # events.ts (espelha backend game.types.ts)
+│   │   ├── styles/                # globals.css (Tailwind @theme)
+│   │   ├── lib/                   # utils.ts (cn())
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── render.yaml                # LEGADO — não utilizado (deploy é via Vercel)
 │   └── .env
 │
 └── .kiro/
-    ├── steering/   # Este arquivo e os demais — carregados sempre ou por fileMatch
-    ├── specs/      # Uma pasta por feature: requirements.md, design.md, tasks.md
-    └── hooks/      # Automação orientada a evento (*.kiro.hook)
+    ├── steering/
+    ├── specs/
+    └── hooks/
 ```
+
+## Próximos passos (planejado, não implementado ainda)
+
+Os seguintes diretórios estão previstos nas specs mas **ainda não existem** no repo:
+- `frontend/src/schemas/` — Zod schemas (depende de `forms-validation` spec)
+- `frontend/src/services/` — Clientes HTTP centralizados
+- `frontend/src/components/ui/` — shadcn/ui gerados (depende de `design-system-tailwind-migration` tasks 3-4)
+- `frontend/src/features/quiz-editor/` — extração dos forms de quiz/pergunta
+- `frontend/src/features/background-music/` — player de música + toggle
+- `backend/src/game/game-room.service.ts` — gate de entrada (spec `room-lifecycle-single-room`)
 
 ## Regra de ouro por camada (frontend)
 
 - **`pages/`**: só roteamento + composição de componentes de `features/`. Nunca tem
-  `useState` de domínio, nunca chama `socket.on` diretamente. Se uma page passar de
-  ~80 linhas, é sinal de que lógica vazou para lá — mover para `features/`.
-- **`features/<nome>/`**: contém `components/`, `hooks/` (ex.: `useJoinRoom.ts`) e
-  eventualmente `schema.ts` daquela feature. É onde a regra de negócio mora.
+  `useState` de domínio, nunca chama `socket.on` diretamente.
+- **`features/<nome>/`**: contém `components/`, `hooks/` e regra de negócio.
 - **`components/shared/`**: componentes puros e sem estado de domínio, só props.
-- **`stores/`**: única fonte de verdade para estado que precisa ser lido por mais de um
-  componente. Estado local de formulário fica em RHF, não em Zustand.
+- **`stores/`**: única fonte de verdade para estado cross-componente.
 
 ## Regra de ouro por camada (backend)
 
-- **Gateway** (`*.gateway.ts`): só mapeia `@SubscribeMessage` → chama um método de
-  service → emite o evento de resposta. Nenhuma regra de negócio dentro do gateway.
-- **Services**: contêm a regra de negócio e são a única camada que fala com
-  `PrismaService` ou com o estado em memória (`GameStateService`/`GameRoomService`).
-- **DTOs** (`dto/*.dto.ts`): validação de entrada REST com `class-validator`. Os
-  eventos de socket usam os tipos de `game.types.ts` + validação manual leve no
-  gateway (guard clauses), documentado na spec correspondente.
+- **Gateway** (`*.gateway.ts`): transporte fino. Decodifica payload → chama service →
+  emite evento. Nenhuma regra de negócio.
+- **Services**: regra de negócio + acesso a dados via `@InjectRepository`.
+- **DTOs** (`dto/*.dto.ts`): validação de entrada REST com `class-validator`.

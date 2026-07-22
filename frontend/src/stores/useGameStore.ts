@@ -6,6 +6,44 @@ import type {
   GameFimEvent,
 } from '../types/events';
 
+// ─── Last Join Info (sessionStorage) ─────────────────────────────────────────
+// Persists across page refreshes within the same browser tab/session.
+// Cleared only when the user explicitly closes the tab or signs out.
+
+export interface LastJoinInfo {
+  turmaId: string;
+  alunoId: string;
+  avatar: string;
+}
+
+const LAST_JOIN_KEY = 'quizlive_last_join';
+
+export function getLastJoinInfo(): LastJoinInfo | null {
+  try {
+    const raw = sessionStorage.getItem(LAST_JOIN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LastJoinInfo;
+    if (parsed.turmaId && parsed.alunoId && parsed.avatar) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function setLastJoinInfo(info: LastJoinInfo): void {
+  try {
+    sessionStorage.setItem(LAST_JOIN_KEY, JSON.stringify(info));
+  } catch { /* sessionStorage unavailable — degrade gracefully */ }
+}
+
+export function clearLastJoinInfo(): void {
+  try {
+    sessionStorage.removeItem(LAST_JOIN_KEY);
+  } catch { /* noop */ }
+}
+
+// ─── Store ───────────────────────────────────────────────────────────────────
+
 export type GameScreen =
   | 'connecting'
   | 'entry'
@@ -145,6 +183,12 @@ export const useGameStore = create<GameState>((set, get) => ({
           return { screen: 'lobby', joinPending: false };
         }
         if (s.screen === 'entry' || s.screen === 'connecting') {
+          // Check for auto-rejoin possibility
+          const lastJoin = getLastJoinInfo();
+          if (lastJoin && !playerInfo) {
+            // Signal auto-rejoin — usePlayerSocket will handle the actual emit
+            return { screen: 'entry', joinPending: true };
+          }
           return { screen: playerInfo ? 'lobby' : 'entry' };
         }
         return {};
@@ -153,6 +197,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Mantém jogadores no pódio — reset só quando admin encerra a sala
       set((s) => (s.finalResult ? { screen: 'final_ranking' as const } : {}));
     } else if (data.status === 'inativo') {
+      // NÃO limpa lastJoinInfo (sessionStorage) — permite auto-rejoin quando sala reabrir
       set({
         screen: 'entry',
         joinPending: false,

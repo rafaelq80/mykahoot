@@ -1,32 +1,47 @@
-# Implementation Plan: Upload de Imagem de Pergunta via ImageKit
+# Implementation Plan: Upload de Imagem via ImageKit
 
 ## Overview
 
-Implementar upload de imagens de pergunta diretamente do browser para ImageKit, usando assinatura gerada pelo backend. O campo de imagem faz parte do `QuestionForm` e usa o componente `ImageUploadField` com preview e barra de progresso.
+Upload de imagens (quiz e pergunta) direto do browser para o CDN ImageKit, usando
+assinatura gerada pelo backend. O fluxo básico está funcional em produção; pendente
+a centralização do código, validação client-side e UX de progresso.
 
 ## Tasks
 
-- [ ] 1. Confirmar/adicionar `@UseGuards(JwtGuard)` em `ImageKitController.getAuthParams` no backend
-- [ ] 2. Criar `frontend/src/services/imagekit.ts` com função `uploadQuestionImage(file, authParams)` usando fetch nativo
-- [ ] 3. Criar `imageFileSchema` (tipo MIME image/*, tamanho ≤ 5 MB) para compor em `schemas/question.schema.ts`
-- [ ] 4. Adicionar componente shadcn `progress` (`npx shadcn add progress`)
-- [ ] 5. Criar `features/quiz-editor/components/ImageUploadField.tsx` com preview, barra de progresso e botão de remoção
-- [ ] 6. Integrar `ImageUploadField` ao `QuestionForm` via `Controller` do RHF
-- [ ] 7. Garantir que `VITE_IMAGEKIT_PUBLIC_KEY` e `VITE_IMAGEKIT_URL_ENDPOINT` estejam no `frontend/.env.example`
-- [ ] 8. Teste manual: upload de imagem válida, rejeição de arquivo > 5 MB ou tipo inválido, remoção de imagem, edição de pergunta existente com preview da URL já salva
+### Implementado
+
+- [x] 1. Criar `ImageKitController` com `GET /imagekit/auth` protegido por `@UseGuards(JwtAuthGuard)`, retornando `{ signature, expire, token }` via SDK `@imagekit/nodejs`
+- [x] 2. Registrar `ImageKitController` no `QuizModule`
+- [x] 3. Implementar função `uploadToImageKit(file, token)` no frontend usando fetch nativo + FormData (POST direto para ImageKit)
+- [x] 4. Integrar upload na criação de pergunta (`AdminQuizzesPage`) — input file + envio + salva `imageUrl`
+- [x] 5. Integrar upload na edição de quiz (`EditQuizPage`) — input file + envio + PATCH com nova URL
+- [x] 6. Exibir preview da imagem existente na `EditQuizPage` quando `quiz.imageUrl` não é null
+- [x] 7. Garantir `VITE_IMAGEKIT_PUBLIC_KEY` e `VITE_IMAGEKIT_URL_ENDPOINT` no `frontend/.env.example`
+- [x] 8. Desabilitar botão de submit enquanto upload está em andamento (`uploading` state)
+
+### Pendente
+
+- [x] 9. Extrair `uploadToImageKit` para `frontend/src/services/imagekit.ts` — eliminar duplicação entre AdminQuizzesPage e EditQuizPage
+- [x] 10. Adicionar validação client-side antes do upload: tipo MIME (jpeg/png/webp) e tamanho (≤ 5 MB), com mensagem de erro inline
+- [x] 11. Implementar barra de progresso visual durante upload (usando `XMLHttpRequest.upload.onprogress`)
+- [ ] 12. Criar componente reutilizável `ImageUploadField` com: input file, preview, barra de progresso, botão de remover
+- [ ] 13. Adicionar botão "Remover imagem" que faz PATCH com `imageUrl: null` (tanto para quiz quanto para pergunta)
+- [ ] 14. Testes: upload de arquivo válido, rejeição de arquivo grande/tipo inválido, remoção de imagem, edição com preview
 
 ## Task Dependency Graph
 
 ```
-1 → 2 → 5 → 6 → 8
-3 → 6
-4 → 5
-7
+1 → 2 → 3 → 4, 5
+5 → 6
+3, 4 → 8
+9 → 10 → 12
+11 → 12
+12 → 13 → 14
 ```
 
 ## Notes
 
-- Depende de `forms-validation` task 7 (`schemas/question.schema.ts`) para integração via RHF.
-- Depende de `design-system-tailwind-migration` task 4 (shadcn `progress`).
-- A assinatura ImageKit nunca deve ser gerada no frontend — sempre via `GET /imagekit/auth` com JWT.
-- Nenhuma dependência pesada de SDK de upload: usar fetch nativo com `FormData`.
+- Tasks 1–8 estão em produção e funcionando.
+- Tasks 9–14 são dívida técnica — melhorias de DX e UX, não bloqueiam funcionalidade.
+- A função `uploadToImageKit` é idêntica nos dois arquivos — a task 9 é a primeira a atacar.
+- Quando RHF + Zod forem adotados (spec `forms-validation`), o `ImageUploadField` (task 12) deve ser integrável via `Controller`.

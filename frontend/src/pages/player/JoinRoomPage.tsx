@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { JoinRoomForm } from '../../features/player-session/components/JoinRoomForm';
 import { AvatarSelectPage } from './AvatarSelectPage';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, getLastJoinInfo, setLastJoinInfo } from '../../stores/useGameStore';
 import { getSocket } from '../../hooks/useSocket';
 
 type Step = 'form' | 'avatar';
@@ -38,6 +38,24 @@ export default function JoinRoomPage() {
 
   const roomOpen = gameStatus === 'lobby';
 
+  // If auto-rejoin is in progress, show a loading indicator
+  const autoRejoining = joinPending && !!getLastJoinInfo();
+  if (autoRejoining) {
+    return (
+      <div
+        className="relative min-h-dvh flex flex-col items-center justify-center gap-4"
+        style={{ backgroundColor: '#2d0a6e' }}
+      >
+        <p className="font-black text-2xl text-white animate-pulse motion-reduce:animate-none">
+          Reentrando na sala...
+        </p>
+        {errorMessage && (
+          <p className="text-sm text-white/70 font-medium">{errorMessage}</p>
+        )}
+      </div>
+    );
+  }
+
   const handleContinue = (alunoId: string, nickname: string, turmaId: string) => {
     setSelected({ alunoId, nickname, turmaId });
     setStep('avatar');
@@ -51,6 +69,12 @@ export default function JoinRoomPage() {
     if (!roomOpen || !selected) return;
     setPlayerInfo({ nickname: selected.nickname, avatar });
     setJoinPending(true);
+    // Save for auto-rejoin on room reopen
+    setLastJoinInfo({
+      turmaId: selected.turmaId,
+      alunoId: selected.alunoId,
+      avatar,
+    });
     getSocket().emit('player:entrar', {
       alunoId: selected.alunoId,
       avatar,

@@ -1,7 +1,4 @@
 import { usePlayerSocket } from '../features/player-session/hooks/usePlayerSocket';
-import { useBackgroundMusic } from '../features/background-music/hooks/useBackgroundMusic';
-import type { MusicPhase } from '../features/background-music/constants';
-import type { GameScreen } from '../stores/useGameStore';
 import { useGameStore } from '../stores/useGameStore';
 import JoinRoomPage from './player/JoinRoomPage';
 import LobbyPage from './player/LobbyPage';
@@ -9,29 +6,19 @@ import QuestionPage from './player/QuestionPage';
 import ResultPage from './player/ResultPage';
 import PodiumPage from './player/PodiumPage';
 
-function musicPhaseForScreen(screen: GameScreen): MusicPhase {
-  switch (screen) {
-    case 'lobby':
-      return 'lobby';
-    case 'question':
-      return 'question';
-    case 'question_result':
-      return 'result';
-    case 'final_ranking':
-      return 'podium';
-    default:
-      return 'idle';
-  }
-}
-
+/**
+ * Player entry point — mounts the socket bridge and renders the
+ * appropriate sub-page based on game store state.
+ *
+ * NOTE: Background music does NOT play here. Music plays only on the
+ * professor's device (AdminPage). The sting (correct/wrong) still plays
+ * on the student's device via ResultPage → playSting.
+ */
 export function PlayerPage() {
   usePlayerSocket();
 
   const screen = useGameStore((s) => s.screen);
   const errorMessage = useGameStore((s) => s.errorMessage);
-  const musicEnabledByAdmin = useGameStore((s) => s.musicEnabledByAdmin);
-
-  useBackgroundMusic(musicPhaseForScreen(screen), musicEnabledByAdmin);
 
   return (
     <>
