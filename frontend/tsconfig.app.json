@@ -15,6 +15,13 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path alias — mantido em sincronia com resolve.alias em vite.config.ts.
+       Sem "baseUrl": com moduleResolution "bundler" os paths já resolvem
+       relativos a este arquivo, e "baseUrl" está deprecado no TS 6. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Type checking */
     "strict": true,
 

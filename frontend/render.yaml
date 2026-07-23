@@ -1,3 +1,8 @@
+# ⚠️ LEGADO — NÃO É A FONTE DE VERDADE DO DEPLOY DO FRONTEND.
+# O deploy do frontend é feito na Vercel (ver .kiro/specs/deployment-vercel-render).
+# Este arquivo é resquício de uma configuração de deploy no Render que não é mais
+# utilizada. Mantido apenas para referência histórica — ver AUDIT.md §4.
+# O backend continua no Render normalmente (backend/render.yaml é real e usado).
 services:
   - type: web
     name: quizlive-frontend

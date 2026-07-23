@@ -1,10 +1,10 @@
-import { usePlayerSocket } from '../features/player-session/hooks/usePlayerSocket';
-import { useGameStore } from '../stores/useGameStore';
-import JoinRoomPage from './player/JoinRoomPage';
-import LobbyPage from './player/LobbyPage';
-import QuestionPage from './player/QuestionPage';
-import ResultPage from './player/ResultPage';
-import PodiumPage from './player/PodiumPage';
+import { usePlayerSocket } from '../player/hooks/usePlayerSocket';
+import { useGameStore } from '../player/store/useGameStore';
+import JoinRoomPage from '../player/pages/JoinRoomPage';
+import LobbyPage from '../player/pages/LobbyPage';
+import QuestionPage from '../player/pages/QuestionPage';
+import ResultPage from '../player/pages/ResultPage';
+import PodiumPage from '../player/pages/PodiumPage';
 
 /**
  * Player entry point — mounts the socket bridge and renders the

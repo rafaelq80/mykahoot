@@ -63,34 +63,85 @@ inclusion: always
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/                 # Componentes de ROTA
-│   │   │   ├── player/            # Sub-pages do aluno
+│   │   ├── admin/                 # Contexto do professor (auth + dashboard + CRUD)
+│   │   │   ├── pages/            # Páginas-rota do admin
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   ├── DashboardPage.tsx
+│   │   │   │   ├── QuizzesPage.tsx
+│   │   │   │   ├── TurmasPage.tsx
+│   │   │   │   ├── HistoricoPage.tsx
+│   │   │   │   └── QuizEditorPage.tsx
+│   │   │   ├── components/       # Componentes exclusivos do admin
+│   │   │   │   ├── AdminHeader.tsx
+│   │   │   │   ├── AdminFooter.tsx
+│   │   │   │   ├── AdminScreenLayout.tsx
+│   │   │   │   ├── AdminQuestionDisplay.tsx
+│   │   │   │   ├── AdminPodiumPanel.tsx
+│   │   │   │   ├── AdminMusicControl.tsx
+│   │   │   │   ├── FullScoreboardTable.tsx
+│   │   │   │   ├── PlayersSidebar.tsx
+│   │   │   │   ├── QuestionControlPanel.tsx
+│   │   │   │   └── WaitingRoomPanel.tsx
+│   │   │   ├── hooks/            # Hooks exclusivos do admin
+│   │   │   │   ├── useAdminSocket.ts
+│   │   │   │   ├── useThemes.ts
+│   │   │   │   ├── useQuizzes.ts
+│   │   │   │   └── useQuestions.ts
+│   │   │   └── store/
+│   │   │       └── useAdminStore.ts
+│   │   │
+│   │   ├── player/                # Contexto do aluno (fluxo de jogo)
+│   │   │   ├── pages/            # Páginas-rota do player
 │   │   │   │   ├── JoinRoomPage.tsx
+│   │   │   │   ├── AvatarSelectPage.tsx
 │   │   │   │   ├── LobbyPage.tsx
 │   │   │   │   ├── QuestionPage.tsx
 │   │   │   │   ├── ResultPage.tsx
 │   │   │   │   └── PodiumPage.tsx
-│   │   │   ├── AdminPage.tsx          # Container c/ nav + tabs
-│   │   │   ├── AdminLoginPage.tsx
-│   │   │   ├── AdminDashboardPage.tsx
-│   │   │   ├── AdminQuizzesPage.tsx
-│   │   │   ├── AdminHistoricoPage.tsx
-│   │   │   ├── AdminTurmasPage.tsx
-│   │   │   └── PlayerPage.tsx         # Orquestrador do fluxo do aluno
-│   │   ├── features/              # Lógica de domínio por feature
-│   │   │   ├── player-session/    #   JoinRoomForm, usePlayerSocket
-│   │   │   ├── question-flow/     #   QuestionView
-│   │   │   ├── ranking/           #   QuestionResultView, PodiumView
-│   │   │   └── admin-control/     #   WaitingRoomPanel, QuestionControlPanel, etc.
-│   │   ├── components/shared/     # Puros: AvatarBadge, OptionButton, TimerDisplay, etc.
-│   │   ├── hooks/                 # Hooks técnicos (useSocket, useCountdown)
-│   │   ├── stores/                # Zustand (useGameStore, useAdminStore)
-│   │   ├── types/                 # events.ts (espelha backend game.types.ts)
+│   │   │   ├── components/       # Componentes exclusivos do player
+│   │   │   │   ├── JoinRoomForm.tsx
+│   │   │   │   ├── QuestionView.tsx
+│   │   │   │   ├── QuestionResultView.tsx
+│   │   │   │   ├── PodiumView.tsx
+│   │   │   │   ├── TopNavBar.tsx
+│   │   │   │   ├── TimerDisplay.tsx
+│   │   │   │   ├── AvatarBadge.tsx
+│   │   │   │   ├── ProgressBar.tsx
+│   │   │   │   ├── ScorePill.tsx
+│   │   │   │   ├── PointsGainedCard.tsx
+│   │   │   │   ├── PositionCard.tsx
+│   │   │   │   └── OptionButton.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── usePlayerSocket.ts
+│   │   │   └── store/
+│   │   │       └── useGameStore.ts
+│   │   │
+│   │   ├── shared/                # Código usado por AMBOS os contextos
+│   │   │   ├── components/
+│   │   │   │   ├── PodiumDisplay.tsx
+│   │   │   │   ├── RankingRow.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   ├── TextField.tsx
+│   │   │   │   ├── ConfirmDialog.tsx
+│   │   │   │   └── ErrorBoundary.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useSocket.ts
+│   │   │   │   ├── useCountdown.ts
+│   │   │   │   └── useBackgroundMusic.ts
+│   │   │   ├── store/
+│   │   │   │   └── useSettingsStore.ts
+│   │   │   └── constants.ts
+│   │   │
+│   │   ├── pages/                 # Shells de roteamento de topo
+│   │   │   ├── AdminPage.tsx      # Layout + sub-rotas admin (lazy-loaded)
+│   │   │   └── PlayerPage.tsx     # Orquestrador do fluxo do aluno
+│   │   ├── schemas/               # Zod schemas (RHF validation)
+│   │   ├── services/              # api.ts (apiFetch), imagekit.ts
+│   │   ├── lib/                   # utils.ts (cn()), jwt.ts
+│   │   ├── types/                 # events.ts, turma.ts
 │   │   ├── styles/                # globals.css (Tailwind @theme)
-│   │   ├── lib/                   # utils.ts (cn())
 │   │   ├── App.tsx
 │   │   └── main.tsx
-│   ├── render.yaml                # LEGADO — não utilizado (deploy é via Vercel)
 │   └── .env
 │
 └── .kiro/
@@ -101,21 +152,27 @@ inclusion: always
 
 ## Próximos passos (planejado, não implementado ainda)
 
-Os seguintes diretórios estão previstos nas specs mas **ainda não existem** no repo:
-- `frontend/src/schemas/` — Zod schemas (depende de `forms-validation` spec)
-- `frontend/src/services/` — Clientes HTTP centralizados
-- `frontend/src/components/ui/` — shadcn/ui gerados (depende de `design-system-tailwind-migration` tasks 3-4)
-- `frontend/src/features/quiz-editor/` — extração dos forms de quiz/pergunta
-- `frontend/src/features/background-music/` — player de música + toggle
+Os seguintes itens estão previstos nas specs mas **ainda não existem** no repo:
 - `backend/src/game/game-room.service.ts` — gate de entrada (spec `room-lifecycle-single-room`)
+- Migração das páginas AdminQuizzesPage/AdminTurmasPage/EditQuizPage para usar
+  `shared/components/Button`, `TextField`, `ConfirmDialog` (prompt separado por página)
 
 ## Regra de ouro por camada (frontend)
 
-- **`pages/`**: só roteamento + composição de componentes de `features/`. Nunca tem
-  `useState` de domínio, nunca chama `socket.on` diretamente.
-- **`features/<nome>/`**: contém `components/`, `hooks/` e regra de negócio.
-- **`components/shared/`**: componentes puros e sem estado de domínio, só props.
-- **`stores/`**: única fonte de verdade para estado cross-componente.
+- **`pages/`** (raiz): só shells de roteamento (`AdminPage`, `PlayerPage`). `AdminPage`
+  é lazy-loaded e contém sub-rotas via React Router. Nenhuma lógica de domínio.
+- **`admin/pages/`**: composição de componentes de `admin/components/` + hooks de
+  `admin/hooks/`. Pode ter `useForm` (RHF) local para formulários.
+- **`player/pages/`**: composição de componentes de `player/components/` + hooks.
+  Nunca chama `socket.on` diretamente — isso vive em `usePlayerSocket`.
+- **`*/components/`**: componentes de apresentação que recebem dados por props.
+  Componentes em `shared/components/` devem ser puros e sem estado de domínio.
+- **`*/hooks/`**: encapsulam efeitos colaterais (socket, fetch, timers).
+- **`*/store/`**: Zustand — única fonte de verdade para estado cross-componente.
+  Cada contexto tem sua store (`useAdminStore`, `useGameStore`); `useSettingsStore`
+  em shared é cross-contexto (preferências do usuário como volume).
+- **`schemas/`**: Zod schemas para validação de formulários (RHF + zodResolver).
+- **`services/`**: `apiFetch` centralizado; nenhuma página faz `fetch()` direto.
 
 ## Regra de ouro por camada (backend)
 
