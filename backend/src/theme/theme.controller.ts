@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -32,14 +33,14 @@ export class ThemeController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateThemeDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateThemeDto) {
     return this.themeService.update(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.themeService.remove(id);
   }
 }

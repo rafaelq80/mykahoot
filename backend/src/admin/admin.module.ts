@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,9 +13,12 @@ import { Admin } from './entities/admin.entity';
   imports: [
     TypeOrmModule.forFeature([Admin]),
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET!,
-      signOptions: { expiresIn: '8h' },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '8h' },
+      }),
     }),
   ],
   controllers: [AdminController],

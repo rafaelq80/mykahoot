@@ -6,7 +6,9 @@ import { validateEnv } from './config/env.validation';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
+import { GameHistoryModule } from './game-history/game-history.module';
 import { GameModule } from './game/game.module';
+import { MediaModule } from './media/media.module';
 import { QuizModule } from './quiz/quiz.module';
 import { ThemeModule } from './theme/theme.module';
 import { TurmaModule } from './turma/turma.module';
@@ -22,7 +24,9 @@ import { AlunoModule } from './aluno/aluno.module';
     TurmaModule,
     AdminModule,
     GameModule,
+    GameHistoryModule,
     AlunoModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [

@@ -36,7 +36,7 @@ export class PlayerResult {
   @IsUUID()
   gameSessionId!: string;
 
-  @ManyToOne(() => GameSession, (session) => session.results)
+  @ManyToOne(() => GameSession, (session) => session.results, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'gameSessionId' })
   @IsOptional()
   session?: GameSession;

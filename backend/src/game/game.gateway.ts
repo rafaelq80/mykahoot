@@ -9,11 +9,9 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import {
   requireAdminSocket,
@@ -21,21 +19,20 @@ import {
 } from '../admin/ws-admin.helper';
 import { Question } from '../quiz/entities/question.entity';
 import { Quiz } from '../quiz/entities/quiz.entity';
-import { AlunoService } from '../aluno/aluno.service';
 import { AdminConectarDto } from './dto/admin-conectar.dto';
 import { EntrarDto } from './dto/entrar.dto';
 import { MusicaDto } from './dto/musica.dto';
 import { ResponderDto } from './dto/responder.dto';
 import { SelecionarTemaDto } from './dto/selecionar-tema.dto';
-import { GameSession } from './entities/game-session.entity';
-import { PlayerResult } from './entities/player-result.entity';
-import { GameResultsService } from './game-results.service';
 import { GameStateService } from './game-state.service';
+import { GameService } from './game.service';
 
 // --- Gateway ---------------------------------------------------------------
 
 @WebSocketGateway({
-  cors: { origin: process.env.FRONTEND_URL ?? '*' },
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  },
 })
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -45,9 +42,7 @@ export class GameGateway
 
   /** Full question list cached from DB when the room is opened */
   private questions: Question[] = [];
-  /** Quiz atual (título/imagem) cacheado quando a sala é aberta — usado
-   *  pra popular o lobby do player sem precisar guardar isso no GameState
-   *  compartilhado. */
+  /** Quiz atual (título/imagem) cacheado quando a sala é aberta */
   private currentQuiz: Quiz | null = null;
 
   /** Simple in-memory rate limiter for socket events (per socketId) */
@@ -58,7 +53,9 @@ export class GameGateway
   private isSocketRateLimited(socketId: string): boolean {
     const now = Date.now();
     const timestamps = this.socketRateMap.get(socketId) ?? [];
-    const recent = timestamps.filter((t) => now - t < this.SOCKET_RATE_WINDOW_MS);
+    const recent = timestamps.filter(
+      (t) => now - t < this.SOCKET_RATE_WINDOW_MS,
+    );
     if (recent.length >= this.SOCKET_RATE_LIMIT) {
       this.socketRateMap.set(socketId, recent);
       return true;
@@ -70,17 +67,8 @@ export class GameGateway
 
   constructor(
     private readonly gameStateService: GameStateService,
-    private readonly gameResultsService: GameResultsService,
-    private readonly alunoService: AlunoService,
+    private readonly gameService: GameService,
     private readonly jwtService: JwtService,
-    @InjectRepository(Question)
-    private readonly questionRepository: Repository<Question>,
-    @InjectRepository(Quiz)
-    private readonly quizRepository: Repository<Quiz>,
-    @InjectRepository(GameSession)
-    private readonly gameSessionRepository: Repository<GameSession>,
-    @InjectRepository(PlayerResult)
-    private readonly playerResultRepository: Repository<PlayerResult>,
   ) {}
 
   afterInit(): void {
@@ -165,29 +153,10 @@ export class GameGateway
     try {
       const { quizId } = dto;
 
-      const questions = await this.questionRepository.find({
-        where: { quizId },
-        order: { order: 'ASC' },
-      });
+      const result = await this.gameService.abrirSala(quizId);
 
-      if (questions.length === 0) {
-        client.emit('game:erro', { message: 'Quiz não possui perguntas.' });
-        return;
-      }
-
-      this.currentQuiz = await this.quizRepository.findOne({
-        where: { id: quizId },
-      });
-
-      const session = this.gameSessionRepository.create({
-        quizId,
-        status: 'em_andamento',
-      });
-      await this.gameSessionRepository.save(session);
-
-      this.questions = questions;
-
-      this.gameStateService.abrirSala(quizId, session.id);
+      this.questions = result.questions;
+      this.currentQuiz = result.quiz;
 
       await client.join('admins');
 
@@ -310,7 +279,8 @@ export class GameGateway
     } catch (err) {
       this.logger.error('admin:finalizarJogo error', err);
       client.emit('game:erro', {
-        message: err instanceof Error ? err.message : 'Erro ao finalizar jogo.',
+        message:
+          err instanceof Error ? err.message : 'Erro ao finalizar jogo.',
       });
     }
   }
@@ -352,22 +322,10 @@ export class GameGateway
         return;
       }
 
-      this.gameStateService.clearTimer();
-
-      if (state.gameSessionId) {
-        try {
-          await this.gameResultsService.finalizarSessao(state.gameSessionId);
-        } catch (dbErr) {
-          this.logger.error(
-            'Failed to update GameSession status on encerrarSala',
-            dbErr,
-          );
-        }
-      }
+      await this.gameService.encerrarSala();
 
       this.server.to('players').emit('game:salaEncerrada');
 
-      this.gameStateService.resetar();
       this.questions = [];
       this.currentQuiz = null;
 
@@ -383,29 +341,15 @@ export class GameGateway
 
   // --- Player -> Server --------------------------------------------------
 
-  /**
-   * Entrada do aluno na partida.
-   *
-   * Regra de negocio corrigida: o aluno so pode entrar se realmente
-   * pertencer a turma informada. Antes, o cliente enviava um nickname
-   * livre e apenas a existencia da turma era checada -- qualquer pessoa
-   * podia entrar em qualquer turma digitando qualquer nome. Agora:
-   *
-   *  1. O payload traz `alunoId` (nao mais um nickname livre).
-   *  2. Buscamos o Aluno e conferimos que aluno.turmaId === turmaId
-   *     (TurmaService.findAlunoInTurma lanca NotFound caso contrario).
-   *  3. O nickname exibido no jogo e sempre aluno.nome, vindo do
-   *     cadastro -- nunca um valor arbitrario enviado pelo cliente.
-   *  4. Um mesmo aluno nao pode ocupar duas conexoes simultaneas na
-   *     mesma partida (ver GameStateService.adicionarJogador).
-   */
   @SubscribeMessage('player:entrar')
   async handleEntrar(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: EntrarDto,
   ): Promise<void> {
     if (this.isSocketRateLimited(client.id)) {
-      client.emit('game:erro', { message: 'Muitas tentativas. Aguarde um momento.' });
+      client.emit('game:erro', {
+        message: 'Muitas tentativas. Aguarde um momento.',
+      });
       return;
     }
     try {
@@ -432,46 +376,17 @@ export class GameGateway
         return;
       }
 
-      let aluno;
       try {
-        aluno = await this.alunoService.findAlunoInTurma(
-          dto.turmaId,
-          dto.alunoId,
-        );
-      } catch {
-        client.emit('game:erro', {
-          message:
-            'Aluno não encontrado nesta turma. Confira sua turma e tente novamente.',
+        await this.gameService.processarEntrada(client.id, {
+          turmaId: dto.turmaId,
+          alunoId: dto.alunoId,
+          avatar: dto.avatar,
         });
-        return;
-      }
-
-      const nickname = aluno.nome.trim();
-
-      const playerResult = this.playerResultRepository.create({
-        gameSessionId: state.gameSessionId,
-        nickname,
-        avatar: dto.avatar.trim(),
-        turmaId: dto.turmaId,
-        alunoId: dto.alunoId,
-        score: 0,
-        answers: [],
-      });
-      await this.playerResultRepository.save(playerResult);
-
-      try {
-        this.gameStateService.adicionarJogador(
-          client.id,
-          dto.alunoId,
-          nickname,
-          dto.avatar.trim(),
-          playerResult.id,
-        );
-      } catch (stateErr) {
+      } catch (entradaErr) {
         client.emit('game:erro', {
           message:
-            stateErr instanceof Error
-              ? stateErr.message
+            entradaErr instanceof Error
+              ? entradaErr.message
               : 'Erro ao entrar na sala.',
         });
         return;
@@ -495,7 +410,9 @@ export class GameGateway
     @MessageBody() payload: ResponderDto,
   ): Promise<void> {
     if (this.isSocketRateLimited(client.id)) {
-      client.emit('game:erro', { message: 'Muitas tentativas. Aguarde um momento.' });
+      client.emit('game:erro', {
+        message: 'Muitas tentativas. Aguarde um momento.',
+      });
       return;
     }
     try {
@@ -517,7 +434,7 @@ export class GameGateway
 
       const { questionId, selectedIndex } = dto;
 
-      const allAnswered = this.gameStateService.registrarResposta(
+      const { allAnswered } = this.gameService.registrarResposta(
         client.id,
         questionId,
         selectedIndex,
@@ -538,7 +455,7 @@ export class GameGateway
     }
   }
 
-  // --- Private helpers -----------------------------------------------------
+  // --- Private helpers (need Server access) --------------------------------
 
   private _broadcastEstado(): void {
     const state = this.gameStateService.state;
@@ -609,63 +526,17 @@ export class GameGateway
 
   private async _processarResultado(): Promise<void> {
     try {
-      const state = this.gameStateService.state;
+      const result = await this.gameService.processarResultado(this.questions);
 
-      if (state.status !== 'pergunta_ativa') {
-        return;
-      }
+      if (!result) return;
 
-      this.gameStateService.clearTimer();
-      this.gameStateService.setStatus('mostrando_resultado');
-
-      const question = this.questions[state.currentQuestionIndex];
-
-      if (!question) {
-        this.logger.error('_processarResultado: pergunta não encontrada');
-        return;
-      }
-
-      const ranking = this.gameStateService.calcularResultadoPergunta(
-        this.questions,
-        question.correctIndex,
-        question.timeLimitSec,
-      );
-
-      await Promise.allSettled(
-        [...state.players.values()].map(async (player) => {
-          try {
-            const answersArray = [...player.answers.entries()].map(
-              ([qId, a]) => ({
-                questionId: qId,
-                selectedIndex: a.selectedIndex,
-                correct: a.correct,
-                timeMs: a.timeMs,
-              }),
-            );
-            await this.playerResultRepository.update(
-              { id: player.playerResultId },
-              { score: player.score, answers: answersArray },
-            );
-          } catch (dbErr) {
-            this.logger.error(
-              `Failed to persist PlayerResult for ${player.nickname}`,
-              dbErr,
-            );
-          }
-        }),
-      );
-
-      const top5 = ranking.slice(0, 5).map((e) => ({
-        nickname: e.nickname,
-        avatar: e.avatar,
-        score: e.score,
-      }));
+      const { ranking, top5, correctIndex } = result;
 
       for (const [idx, entry] of ranking.entries()) {
         const socket = this.server.sockets.sockets.get(entry.socketId);
         if (socket) {
           socket.emit('game:resultadoPergunta', {
-            correctIndex: question.correctIndex,
+            correctIndex,
             top5,
             you: {
               correct: entry.correct,
@@ -678,7 +549,7 @@ export class GameGateway
       }
 
       this.server.to('admins').emit('admin:placar', {
-        correctIndex: question.correctIndex,
+        correctIndex,
         ranking: ranking.map((e) => ({
           socketId: e.socketId,
           nickname: e.nickname,
@@ -697,32 +568,7 @@ export class GameGateway
 
   private async _finalizarJogo(): Promise<void> {
     try {
-      const state = this.gameStateService.state;
-
-      const finalRanking = [...state.players.values()]
-        .sort((a, b) => b.score - a.score)
-        .map((p) => ({
-          socketId: p.socketId,
-          nickname: p.nickname,
-          avatar: p.avatar,
-          score: p.score,
-        }));
-
-      if (state.gameSessionId) {
-        try {
-          await this.gameResultsService.finalizarSessao(state.gameSessionId);
-        } catch (dbErr) {
-          this.logger.error('Failed to update GameSession status', dbErr);
-        }
-      }
-
-      this.gameStateService.setStatus('finalizado');
-
-      const top5 = finalRanking.slice(0, 5).map((e) => ({
-        nickname: e.nickname,
-        avatar: e.avatar,
-        score: e.score,
-      }));
+      const { finalRanking, top5 } = await this.gameService.finalizarJogo();
 
       for (const [idx, entry] of finalRanking.entries()) {
         const socket = this.server.sockets.sockets.get(entry.socketId);

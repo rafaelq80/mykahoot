@@ -15,6 +15,20 @@ import {
 const BASE_POINTS = 1000;
 const MIN_CORRECT_POINTS = 500;
 
+/** Pure helper: calculates points earned for a single answer. */
+function calcularPontos(
+  isCorrect: boolean,
+  timeMs: number,
+  timeLimitMs: number,
+): number {
+  if (!isCorrect) return 0;
+  const clampedTimeMs = Math.min(timeMs, timeLimitMs);
+  const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
+  return Math.round(
+    MIN_CORRECT_POINTS + (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio,
+  );
+}
+
 @Injectable()
 export class GameStateService {
   private readonly logger = new Logger(GameStateService.name);
@@ -216,14 +230,7 @@ export class GameStateService {
       answer.correct = isCorrect;
 
       // Calculate points
-      const clampedTimeMs = Math.min(answer.timeMs, timeLimitMs);
-      const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
-      const pointsEarned = isCorrect
-        ? Math.round(
-            MIN_CORRECT_POINTS +
-              (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio,
-          )
-        : 0;
+      const pointsEarned = calcularPontos(isCorrect, answer.timeMs, timeLimitMs);
 
       player.score += pointsEarned;
 
@@ -235,14 +242,7 @@ export class GameStateService {
     const ranking: RankingEntry[] = [...this._state.players.values()].map(
       (player) => {
         const answer = player.answers.get(questionId)!;
-        const clampedTimeMs = Math.min(answer.timeMs, timeLimitMs);
-        const remainingRatio = (timeLimitMs - clampedTimeMs) / timeLimitMs;
-        const pointsEarned = answer.correct
-          ? Math.round(
-              MIN_CORRECT_POINTS +
-                (BASE_POINTS - MIN_CORRECT_POINTS) * remainingRatio,
-            )
-          : 0;
+        const pointsEarned = calcularPontos(answer.correct, answer.timeMs, timeLimitMs);
 
         return {
           socketId: player.socketId,

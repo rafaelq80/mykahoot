@@ -8,6 +8,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URL deve ser uma URL válida'),
   JWT_SECRET: z.string().min(8, 'JWT_SECRET deve ter pelo menos 8 caracteres'),
   PORT: z.coerce.number().optional().default(3000),
+  IMAGEKIT_PUBLIC_KEY: z.string().optional(),
+  IMAGEKIT_PRIVATE_KEY: z.string().optional(),
+  IMAGEKIT_URL_ENDPOINT: z.string().optional(),
+  FRONTEND_URL: z.string().optional(),
+  ENABLE_SWAGGER: z.string().optional(),
+  NODE_ENV: z.string().optional().default('development'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { GameSession } from './entities/game-session.entity';
+import { GameSession } from '../game/entities/game-session.entity';
 
 @Injectable()
-export class GameResultsService implements OnModuleInit {
-  private readonly logger = new Logger(GameResultsService.name);
+export class GameHistoryService implements OnModuleInit {
+  private readonly logger = new Logger(GameHistoryService.name);
 
   constructor(
     @InjectRepository(GameSession)

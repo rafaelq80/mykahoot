@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -15,9 +16,6 @@ import { CreateTurmaDto } from './dto/create-turma.dto';
 import { UpdateTurmaDto } from './dto/update-turma.dto';
 import { TurmaService } from './turma.service';
 
-// Leituras públicas (mesma abordagem de /themes e /quizzes) — a tela de
-// ingresso dos players precisa ler turmas sem estar autenticada como admin.
-// Mutações exigem o professor logado. Rotas de aluno vivem em AlunoModule.
 @Controller('turmas')
 export class TurmaController {
   constructor(private readonly turmaService: TurmaService) {}
@@ -28,7 +26,7 @@ export class TurmaController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.turmaService.findOneTurma(id);
   }
 
@@ -40,14 +38,14 @@ export class TurmaController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateTurmaDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTurmaDto) {
     return this.turmaService.updateTurma(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.turmaService.removeTurma(id);
   }
 }

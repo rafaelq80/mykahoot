@@ -66,7 +66,7 @@ export class Question {
   @IsInt()
   order!: number;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.questions)
+  @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quizId' })
   @IsOptional()
   quiz?: Quiz;

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -14,9 +15,7 @@ import {
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../admin/jwt.guard';
 import { OptionalJwtAuthGuard } from '../admin/optional-jwt.guard';
-import { CreateQuestionDto } from './dto/create-question.dto';
 import { CreateQuizDto } from './dto/create-quiz.dto';
-import { UpdateQuestionDto } from './dto/update-question.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { QuizService } from './quiz.service';
 
@@ -28,8 +27,6 @@ interface AuthRequest extends Request {
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
-  // ── Quizzes ──────────────────────────────────────────────────────────────
-
   @Get()
   findAll() {
     return this.quizService.findAllQuizzes();
@@ -37,7 +34,7 @@ export class QuizController {
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
-  findOne(@Param('id') id: string, @Req() req: AuthRequest) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthRequest) {
     return this.quizService.findOneQuiz(id, req.user?.role === 'admin');
   }
 
@@ -49,51 +46,14 @@ export class QuizController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateQuizDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateQuizDto) {
     return this.quizService.updateQuiz(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.quizService.removeQuiz(id);
-  }
-
-  // ── Questions ─────────────────────────────────────────────────────────────
-
-  @Get(':id/questions')
-  @UseGuards(OptionalJwtAuthGuard)
-  findAllQuestions(@Param('id') quizId: string, @Req() req: AuthRequest) {
-    return this.quizService.findAllQuestions(
-      quizId,
-      req.user?.role === 'admin',
-    );
-  }
-
-  @Post(':id/questions')
-  @UseGuards(JwtAuthGuard)
-  createQuestion(@Param('id') quizId: string, @Body() dto: CreateQuestionDto) {
-    return this.quizService.createQuestion(quizId, dto);
-  }
-
-  @Patch(':quizId/questions/:questionId')
-  @UseGuards(JwtAuthGuard)
-  updateQuestion(
-    @Param('quizId') quizId: string,
-    @Param('questionId') questionId: string,
-    @Body() dto: UpdateQuestionDto,
-  ) {
-    return this.quizService.updateQuestion(quizId, questionId, dto);
-  }
-
-  @Delete(':quizId/questions/:questionId')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removeQuestion(
-    @Param('quizId') quizId: string,
-    @Param('questionId') questionId: string,
-  ) {
-    return this.quizService.removeQuestion(quizId, questionId);
   }
 }

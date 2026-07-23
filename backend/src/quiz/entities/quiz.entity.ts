@@ -21,7 +21,7 @@ export class Quiz {
   @IsUUID()
   themeId!: string;
 
-  @ManyToOne(() => Theme, (theme) => theme.quizzes)
+  @ManyToOne(() => Theme, (theme) => theme.quizzes, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'themeId' })
   @IsOptional()
   theme?: Theme;

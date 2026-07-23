@@ -56,7 +56,7 @@ export class AdminService {
     username: string,
     plainPassword: string,
   ): Promise<{ id: string; username: string }> {
-    const passwordHash = await bcrypt.hash(plainPassword, 10);
+    const passwordHash = await bcrypt.hash(plainPassword, 12);
     const admin = this.adminRepository.create({ username, passwordHash });
     const saved = await this.adminRepository.save(admin);
     return { id: saved.id, username: saved.username };

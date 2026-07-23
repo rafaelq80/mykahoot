@@ -6,6 +6,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { ImageKit } from '@imagekit/nodejs';
 import { JwtAuthGuard } from '../admin/jwt.guard';
@@ -15,10 +16,10 @@ export class ImageKitController {
   private readonly logger = new Logger(ImageKitController.name);
   private readonly imagekit: ImageKit | null;
 
-  constructor() {
-    const privateKey = process.env['IMAGEKIT_PRIVATE_KEY'];
-    const publicKey = process.env['IMAGEKIT_PUBLIC_KEY'];
-    const urlEndpoint = process.env['IMAGEKIT_URL_ENDPOINT'];
+  constructor(private readonly configService: ConfigService) {
+    const privateKey = this.configService.get<string>('IMAGEKIT_PRIVATE_KEY');
+    const publicKey = this.configService.get<string>('IMAGEKIT_PUBLIC_KEY');
+    const urlEndpoint = this.configService.get<string>('IMAGEKIT_URL_ENDPOINT');
 
     if (!privateKey || !publicKey || !urlEndpoint) {
       this.logger.warn(

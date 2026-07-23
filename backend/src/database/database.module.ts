@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { Global, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameSession } from '../game/entities/game-session.entity';
 import { PlayerResult } from '../game/entities/player-result.entity';
@@ -25,9 +26,10 @@ const ENTITIES = [
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        url: process.env.DATABASE_URL,
+        url: configService.get<string>('DATABASE_URL'),
         entities: ENTITIES,
         migrations: [join(process.cwd(), 'dist/database/migrations/*.js')],
         migrationsRun: false,

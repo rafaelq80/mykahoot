@@ -25,9 +25,10 @@ export class GameSession {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   @IsUUID()
-  quizId!: string;
+  @IsOptional()
+  quizId!: string | null;
 
   @Column({ type: 'varchar', default: 'em_andamento' })
   @IsIn(GAME_SESSION_STATUSES)
@@ -36,10 +37,10 @@ export class GameSession {
   @CreateDateColumn({ type: 'timestamp' })
   playedAt!: Date;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.sessions)
+  @ManyToOne(() => Quiz, (quiz) => quiz.sessions, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'quizId' })
   @IsOptional()
-  quiz?: Quiz;
+  quiz?: Quiz | null;
 
   @OneToMany(() => PlayerResult, (result) => result.session)
   @IsOptional()

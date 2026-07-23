@@ -2,11 +2,11 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../admin/jwt.guard';
-import { GameSession } from './entities/game-session.entity';
+import { GameSession } from '../game/entities/game-session.entity';
 
 @Controller('game/sessions')
 @UseGuards(JwtAuthGuard)
-export class GameSessionsController {
+export class GameHistoryController {
   constructor(
     @InjectRepository(GameSession)
     private readonly gameSessionRepository: Repository<GameSession>,

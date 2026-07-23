@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -15,28 +16,26 @@ import { CreateAlunoDto } from './dto/create-aluno.dto';
 import { UpdateAlunoDto } from './dto/update-aluno.dto';
 import { AlunoService } from './aluno.service';
 
-// Aninhado sob /turmas para preservar as rotas originais, mas vive em seu
-// próprio módulo. Leituras públicas, mutações exigem o professor logado.
 @Controller('turmas/:turmaId/alunos')
 export class AlunoController {
   constructor(private readonly alunoService: AlunoService) {}
 
   @Get()
-  findAll(@Param('turmaId') turmaId: string) {
+  findAll(@Param('turmaId', ParseUUIDPipe) turmaId: string) {
     return this.alunoService.findAllAlunos(turmaId);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Param('turmaId') turmaId: string, @Body() dto: CreateAlunoDto) {
+  create(@Param('turmaId', ParseUUIDPipe) turmaId: string, @Body() dto: CreateAlunoDto) {
     return this.alunoService.createAluno(turmaId, dto);
   }
 
   @Patch(':alunoId')
   @UseGuards(JwtAuthGuard)
   update(
-    @Param('turmaId') turmaId: string,
-    @Param('alunoId') alunoId: string,
+    @Param('turmaId', ParseUUIDPipe) turmaId: string,
+    @Param('alunoId', ParseUUIDPipe) alunoId: string,
     @Body() dto: UpdateAlunoDto,
   ) {
     return this.alunoService.updateAluno(turmaId, alunoId, dto);
@@ -45,7 +44,10 @@ export class AlunoController {
   @Delete(':alunoId')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('turmaId') turmaId: string, @Param('alunoId') alunoId: string) {
+  remove(
+    @Param('turmaId', ParseUUIDPipe) turmaId: string,
+    @Param('alunoId', ParseUUIDPipe) alunoId: string,
+  ) {
     return this.alunoService.removeAluno(turmaId, alunoId);
   }
 }
