@@ -7,13 +7,19 @@ const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'QuizMaster Live';
 interface AdminHeaderProps {
   navLinks: { to: string; label: string }[];
   onLogout: () => void;
+  /**
+   * Quando true (partida em andamento, tela de controle da pergunta),
+   * oculta as abas de navegação — só "Sair" e o controle de som ficam
+   * visíveis, pra não distrair o professor durante o jogo.
+   */
+  simplified?: boolean;
 }
 
-export function AdminHeader({ navLinks, onLogout }: AdminHeaderProps) {
+export function AdminHeader({ navLinks, onLogout, simplified = false }: AdminHeaderProps) {
   return (
     <nav className="flex shrink-0 items-center gap-1 border-b border-surface-container bg-white px-4 py-2.5 shadow-sm">
       <span className="mr-4 font-black text-lg text-brand">{APP_NAME}</span>
-      {navLinks.map((link) => (
+      {!simplified && navLinks.map((link) => (
         <NavLink
           key={link.to}
           to={link.to}

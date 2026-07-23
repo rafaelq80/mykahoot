@@ -35,6 +35,8 @@ export function OptionButton({
         // Base layout — um pouco maior que o original, sem dominar o espaço vertical
         'flex min-h-18 w-full items-center gap-3 rounded-xl px-5 py-3.5 sm:min-h-21 sm:gap-4 sm:px-6',
         'text-left font-bold text-base text-white sm:text-lg',
+        // Ocupa melhor o espaço horizontal e comporta textos de até 2 linhas
+        'whitespace-normal break-words',
         'transition-all active:scale-95 motion-reduce:transition-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2',
         // Color per option
@@ -52,10 +54,10 @@ export function OptionButton({
       aria-disabled={disabled}
       onClick={onClick}
     >
-      <span className="text-xl shrink-0 leading-none sm:text-2xl" aria-hidden="true">
+      <span className="text-2xl shrink-0 leading-none sm:text-3xl" aria-hidden="true">
         {isCorrect ? '✓' : ICONS[index]}
       </span>
-      <span className="line-clamp-2 leading-snug">{text}</span>
+      <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{text}</span>
     </button>
   );
 }

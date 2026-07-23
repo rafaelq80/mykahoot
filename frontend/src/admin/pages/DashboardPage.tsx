@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { WaitingRoomPanel } from '../components/WaitingRoomPanel';
 import { QuestionControlPanel } from '../components/QuestionControlPanel';
-import { PlayersSidebar } from '../components/PlayersSidebar';
 import { FullScoreboardTable } from '../components/FullScoreboardTable';
 import { AdminPodiumPanel } from '../components/AdminPodiumPanel';
 import { AdminScreenLayout } from '../components/AdminScreenLayout';
 import { EditQuizPage } from './QuizEditorPage';
 import { useAdminStore } from '../store/useAdminStore';
 import { getSocket } from '../../shared/hooks/useSocket';
-import { cn } from '../../lib/utils';
+import type { GameControlFooterState } from '../components/AdminFooter';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -43,6 +42,7 @@ export function AdminDashboardPage({
   token,
   onQuizzesCountChange,
   onWaitingRoomStateChange,
+  onGameControlStateChange,
 }: {
   token: string;
   onLogout: () => void;
@@ -56,6 +56,13 @@ export function AdminDashboardPage({
    * na tela de espera (ex: seleção de quiz ou partida em andamento).
    */
   onWaitingRoomStateChange?: (state: WaitingRoomFooterState | null) => void;
+  /**
+   * Reporta o estado de controle da pergunta (tela ativa/resultado) pro
+   * AdminPage, que exibe a mensagem "Aguardando respostas…" e os botões
+   * Próxima Pergunta / Encerrar Jogo no rodapé global. `null` fora da
+   * partida em andamento.
+   */
+  onGameControlStateChange?: (state: GameControlFooterState | null) => void;
 }) {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuizId, setSelectedQuizId] = useState('');
@@ -66,8 +73,6 @@ export function AdminDashboardPage({
 
   const screen = useAdminStore((s) => s.screen);
   const currentQuestionIndex = useAdminStore((s) => s.currentQuestionIndex);
-  const timer = useAdminStore((s) => s.timer);
-  const answeredCount = useAdminStore((s) => s.answeredCount);
   const players = useAdminStore((s) => s.players);
 
   const loadQuizzes = useCallback(async () => {
@@ -185,8 +190,34 @@ export function AdminDashboardPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const isLastQuestion = currentQuestionIndex >= questions.length - 1;
+
+  // Reporta pro AdminPage o estado de controle da pergunta (partida em
+  // andamento) enquanto a tela estiver em `question_active` ou
+  // `showing_result`; `null` em qualquer outro caso.
+  useEffect(() => {
+    const active = screen === 'question_active' || screen === 'showing_result';
+    onGameControlStateChange?.(
+      active
+        ? {
+            screen,
+            isLastQuestion,
+            onProximaPergunta: handleProximaPergunta,
+            onEncerrarJogo: handleFinalizarJogo,
+          }
+        : null,
+    );
+  }, [screen, isLastQuestion, handleProximaPergunta, handleFinalizarJogo, onGameControlStateChange]);
+
+  // Limpa o rodapé global ao desmontar.
+  useEffect(() => {
+    return () => {
+      onGameControlStateChange?.(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectedQuiz = quizzes.find((q) => q.id === selectedQuizId);
-  const isTimerUrgent = timer > 0 && timer <= 5;
 
   if (screen === 'lobby') {
     if (editingQuizId) {
@@ -238,50 +269,15 @@ export function AdminDashboardPage({
     );
   }
 
+  // Tela de controle da pergunta — layout próprio, sem AdminScreenLayout:
+  // sem barra superior de título/badge, sem sidebar de jogadores, sem
+  // rodapé branco de sub-informações e sem scroll. O contador de tempo
+  // (em question_active) fica no canto superior direito da própria
+  // pergunta, e as ações/mensagem de espera vivem no rodapé global
+  // (AdminFooter), via onGameControlStateChange.
   return (
-    <AdminScreenLayout
-      title="Controle da Partida"
-      badge={`Pergunta ${currentQuestionIndex + 1}/${questions.length}`}
-      subtitle={selectedQuiz?.title}
-      headerRight={
-        screen === 'question_active' ? (
-          <div
-            className={cn(
-              'flex items-center gap-2 rounded-full px-4 py-2 font-extrabold tabular-nums shadow-sm',
-              isTimerUrgent
-                ? 'animate-pulse bg-option-a text-white motion-reduce:animate-none'
-                : 'bg-white/15 text-white',
-            )}
-          >
-            <span className="text-lg">{timer}s</span>
-          </div>
-        ) : (
-          <span className="rounded-full bg-white/15 px-4 py-2 text-label-xs font-bold uppercase tracking-[0.14em] text-white">
-            {screen === 'showing_result' ? 'Resultado' : 'Em andamento'}
-          </span>
-        )
-      }
-      footer={
-        screen === 'question_active' ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-body-sm font-medium text-gray-500">
-              {answeredCount} de {players.length} jogadores responderam
-            </p>
-            <p className="rounded-full bg-surface-container px-4 py-2 text-label-xs font-bold uppercase tracking-[0.14em] text-brand">
-              Aguardando respostas…
-            </p>
-          </div>
-        ) : undefined
-      }
-    >
-      <div className="flex flex-1 flex-col gap-5 px-5 py-6 lg:flex-row sm:px-8">
-        <PlayersSidebar />
-        <QuestionControlPanel
-          questions={questions}
-          onProximaPergunta={handleProximaPergunta}
-          onEncerrarJogo={handleFinalizarJogo}
-        />
-      </div>
-    </AdminScreenLayout>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-quiz-bg-to bg-quiz-gradient text-white">
+      <QuestionControlPanel questions={questions} />
+    </div>
   );
 }

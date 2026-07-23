@@ -8,6 +8,7 @@ import { AdminTurmasPage } from '../admin/pages/TurmasPage';
 import { AdminHistoricoPage } from '../admin/pages/HistoricoPage';
 import { AdminHeader } from '../admin/components/AdminHeader';
 import { AdminFooter } from '../admin/components/AdminFooter';
+import type { GameControlFooterState } from '../admin/components/AdminFooter';
 import { useAdminSocket } from '../admin/hooks/useAdminSocket';
 import { useBackgroundMusic } from '../shared/hooks/useBackgroundMusic';
 import { useAdminStore } from '../admin/store/useAdminStore';
@@ -43,6 +44,10 @@ export function AdminPage() {
   // botões Finalizar Sala / Iniciar Jogo. `null` fora da sala de espera (ex:
   // seleção de quiz, partida em andamento, outras abas).
   const [waitingRoom, setWaitingRoom] = useState<WaitingRoomFooterState | null>(null);
+  // Estado de controle da pergunta (partida em andamento), reportado pelo
+  // AdminDashboardPage — usado pro rodapé global (Aguardando respostas /
+  // Próxima pergunta / Encerrar jogo) e pro cabeçalho simplificado.
+  const [gameControl, setGameControl] = useState<GameControlFooterState | null>(null);
   const adminScreen = useAdminStore((s) => s.screen);
   const musicEnabledByAdmin = useAdminStore((s) => s.musicEnabledByAdmin);
 
@@ -111,10 +116,10 @@ export function AdminPage() {
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-brand">
-      <AdminHeader navLinks={navLinks} onLogout={handleLogout} />
+    <div className="flex h-dvh flex-col bg-brand">
+      <AdminHeader navLinks={navLinks} onLogout={handleLogout} simplified={gameControl != null} />
 
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 min-h-0 flex-col overflow-auto">
         <Routes>
           <Route
             path="partida"
@@ -125,6 +130,7 @@ export function AdminPage() {
                 adminUsername={adminUsername}
                 onQuizzesCountChange={setQuizzesCount}
                 onWaitingRoomStateChange={setWaitingRoom}
+                onGameControlStateChange={setGameControl}
               />
             }
           />
@@ -135,7 +141,12 @@ export function AdminPage() {
         </Routes>
       </div>
 
-      <AdminFooter adminUsername={adminUsername} waitingRoom={waitingRoom} quizzesCount={quizzesCount} />
+      <AdminFooter
+        adminUsername={adminUsername}
+        waitingRoom={waitingRoom}
+        quizzesCount={quizzesCount}
+        gameControl={gameControl}
+      />
     </div>
   );
 }
