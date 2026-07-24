@@ -3,7 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminLoginPage } from '../admin/pages/LoginPage';
 import { AdminDashboardPage } from '../admin/pages/DashboardPage';
 import type { WaitingRoomFooterState } from '../admin/pages/DashboardPage';
-import { AdminQuizzesPage } from '../admin/pages/QuizzesPage';
+import { QuizListPage } from '../admin/pages/QuizListPage';
+import { CategoriesPage } from '../admin/pages/CategoriesPage';
 import { AdminTurmasPage } from '../admin/pages/TurmasPage';
 import { AdminHistoricoPage } from '../admin/pages/HistoricoPage';
 import { AdminHeader } from '../admin/components/AdminHeader';
@@ -113,6 +114,7 @@ export function AdminPage() {
   const navLinks: { to: string; label: string }[] = [
     { to: '/admin/partida', label: 'Partida' },
     { to: '/admin/quizzes', label: 'Quizzes' },
+    { to: '/admin/categorias', label: 'Categorias' },
     { to: '/admin/turmas', label: 'Turmas' },
     { to: '/admin/historico', label: 'Histórico' },
   ];
@@ -143,7 +145,8 @@ export function AdminPage() {
               />
             }
           />
-          <Route path="quizzes" element={<AdminQuizzesPage token={token} />} />
+          <Route path="quizzes" element={<QuizListPage token={token} />} />
+          <Route path="categorias" element={<CategoriesPage token={token} />} />
           <Route path="turmas" element={<AdminTurmasPage token={token} />} />
           <Route path="historico" element={<AdminHistoricoPage token={token} />} />
           <Route path="*" element={<Navigate to="/admin/partida" replace />} />

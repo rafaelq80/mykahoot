@@ -45,5 +45,15 @@ export function useThemes(token: string) {
     }
   };
 
-  return { themes, loading, error, reload: load, createTheme, deleteTheme };
+  const updateTheme = async (id: string, data: { name?: string; description?: string }): Promise<string | null> => {
+    try {
+      await apiFetch(`/themes/${id}`, { method: 'PATCH', token, body: data });
+      await load();
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : 'Erro ao atualizar tema.';
+    }
+  };
+
+  return { themes, loading, error, reload: load, createTheme, deleteTheme, updateTheme };
 }

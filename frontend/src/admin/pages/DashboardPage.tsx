@@ -4,7 +4,7 @@ import { QuestionControlPanel } from '../components/QuestionControlPanel';
 import { AdminRankingView } from '../components/AdminRankingView';
 import { AdminPodiumView } from '../components/AdminPodiumView';
 import { AdminFullRankingView } from '../components/AdminFullRankingView';
-import { EditQuizPage } from './QuizEditorPage';
+import { QuizFormPage } from './QuizFormPage';
 import { useAdminStore } from '../store/useAdminStore';
 import { useQuizzes } from '../hooks/useQuizzes';
 import { useQuestions } from '../hooks/useQuestions';
@@ -154,9 +154,9 @@ export function AdminDashboardPage({
   if (screen === 'lobby') {
     if (editingQuizId) {
       return (
-        <EditQuizPage
-          quizId={editingQuizId}
+        <QuizFormPage
           token={token}
+          quizId={editingQuizId}
           onClose={() => setEditingQuizId(null)}
           onSaved={() => { void reloadQuizzes(); }}
         />
