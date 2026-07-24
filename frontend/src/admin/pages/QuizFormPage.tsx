@@ -10,6 +10,7 @@ import type { QuizFormData } from '../../schemas/quiz.schema';
 import type { QuestionFormData } from '../../schemas/question.schema';
 import { AdminScreenLayout } from '../components/AdminScreenLayout';
 import { QuestionEditor } from '../components/QuestionEditor';
+import { ImageDropzone } from '../../shared/components/ImageDropzone';
 import { useThemes } from '../hooks/useThemes';
 import type { QuizDetail, Question } from '../../types/quiz';
 
@@ -35,8 +36,12 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
   const [savingQuiz, setSavingQuiz] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [quizImageFile, setQuizImageFile] = useState<File | null>(null);
+  const [quizImagePreview, setQuizImagePreview] = useState<string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+  const [newQImageUrl, setNewQImageUrl] = useState<string | null>(null);
+  const [newQUploading, setNewQUploading] = useState(false);
+  const [newQUploadProgress, setNewQUploadProgress] = useState<number | null>(null);
 
   const quizForm = useForm<QuizFormData>({ resolver: zodResolver(quizSchema) });
   const newQForm = useForm<QuestionFormData>({
@@ -81,7 +86,7 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
         if (valError) { showFeedback(valError); setSavingQuiz(false); return; }
         setUploadProgress(0);
         try {
-          imageUrl = await uploadToImageKit(quizImageFile, token, setUploadProgress);
+          imageUrl = await uploadToImageKit(quizImageFile, token, setUploadProgress, '/quiz');
         } catch (uploadErr) {
           showFeedback(uploadErr instanceof Error ? uploadErr.message : 'Erro no upload.');
           setSavingQuiz(false); setUploadProgress(null); return;
@@ -94,14 +99,18 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
         if (imageUrl) body.imageUrl = imageUrl;
         await apiFetch(`/quizzes/${quizId}`, { method: 'PATCH', token, body });
         setQuiz((prev) => prev ? { ...prev, title: data.title, themeId: data.themeId, imageUrl } : prev);
+        if (quizImagePreview) URL.revokeObjectURL(quizImagePreview);
         setQuizImageFile(null);
+        setQuizImagePreview(null);
         showFeedback('Quiz atualizado!');
         onSaved?.();
       } else {
         const body: Record<string, unknown> = { title: data.title, themeId: data.themeId };
         if (imageUrl) body.imageUrl = imageUrl;
         const created = await apiFetch<{ id: string }>('/quizzes', { method: 'POST', token, body });
+        if (quizImagePreview) URL.revokeObjectURL(quizImagePreview);
         setQuizImageFile(null);
+        setQuizImagePreview(null);
         showFeedback('Quiz criado!');
         onCreated?.(created.id);
       }
@@ -151,10 +160,11 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
     try {
       const created = await apiFetch<Question>(`/quizzes/${quizId}/questions`, {
         method: 'POST', token,
-        body: { text: data.text, options: data.options, correctIndex: data.correctIndex, timeLimitSec: data.timeLimitSec, order: data.order },
+        body: { text: data.text, options: data.options, correctIndex: data.correctIndex, timeLimitSec: data.timeLimitSec, order: data.order, imageUrl: newQImageUrl || undefined },
       });
       setQuestions((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       newQForm.reset({ text: '', options: ['', '', '', ''], correctIndex: 0, timeLimitSec: 20, order: questions.length + 2, imageUrl: '' });
+      setNewQImageUrl(null);
       setCreatingNew(false);
       setSelectedQuestionId(created.id);
       showFeedback('Pergunta adicionada!');
@@ -189,35 +199,47 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
         ) : (
           <>
             {/* Propriedades do quiz */}
-            <section className="card-glass-strong flex flex-col gap-3 p-5">
+            <section className="card-glass-strong flex flex-col gap-4 p-5">
               <h3 className="font-black text-sm uppercase tracking-widest text-quiz-text-muted">Propriedades</h3>
-              <input className={inputCls} placeholder="Título do quiz *" {...quizForm.register('title')} />
-              {quizForm.formState.errors.title && <p className="text-sm font-bold text-option-a">{quizForm.formState.errors.title.message}</p>}
-              <select className={inputCls} {...quizForm.register('themeId')}>
-                <option value="">Selecione a categoria *</option>
-                {themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-              {quizForm.formState.errors.themeId && <p className="text-sm font-bold text-option-a">{quizForm.formState.errors.themeId.message}</p>}
-              <div className="flex items-center gap-3">
-                {quiz?.imageUrl && (
-                  <img src={quiz.imageUrl} alt="" className="h-14 w-24 shrink-0 rounded-lg border border-quiz-border object-cover" />
-                )}
-                <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-quiz-text-muted">
-                  Imagem do quiz
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="text-sm text-white" onChange={(e) => setQuizImageFile(e.target.files?.[0] ?? null)} />
-                </label>
-              </div>
-              {uploadProgress !== null && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full bg-brand rounded-full transition-[width] duration-300" style={{ width: `${uploadProgress}%` }} />
-                  </div>
-                  <span className="text-xs font-mono text-quiz-text-muted">{uploadProgress}%</span>
+              <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+                {/* Coluna esquerda: imagem */}
+                <div className="w-full sm:w-48 shrink-0">
+                  <ImageDropzone
+                    value={quizImagePreview ?? quiz?.imageUrl ?? null}
+                    onFileSelected={(file) => {
+                      setQuizImageFile(file);
+                      setQuizImagePreview(URL.createObjectURL(file));
+                    }}
+                    uploading={savingQuiz && !!quizImageFile}
+                    uploadProgress={uploadProgress}
+                    onRemove={() => {
+                      if (quizImagePreview) URL.revokeObjectURL(quizImagePreview);
+                      setQuizImageFile(null);
+                      setQuizImagePreview(null);
+                      if (quiz) setQuiz({ ...quiz, imageUrl: null });
+                    }}
+                  />
                 </div>
-              )}
+                {/* Coluna direita: título + categoria */}
+                <div className="flex flex-1 flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-semibold uppercase text-label-xs text-quiz-text-muted">Título</label>
+                    <input className={inputCls} placeholder="Título do quiz *" {...quizForm.register('title')} />
+                    {quizForm.formState.errors.title && <p className="text-sm font-bold text-option-a">{quizForm.formState.errors.title.message}</p>}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-semibold uppercase text-label-xs text-quiz-text-muted">Categoria</label>
+                    <select className={inputCls} {...quizForm.register('themeId')}>
+                      <option value="">Selecione a categoria *</option>
+                      {themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    {quizForm.formState.errors.themeId && <p className="text-sm font-bold text-option-a">{quizForm.formState.errors.themeId.message}</p>}
+                  </div>
+                </div>
+              </div>
               <button
                 type="button"
-                className={cn(btnCls, 'self-start')}
+                className={cn(btnCls, 'w-full')}
                 disabled={savingQuiz}
                 onClick={() => void quizForm.handleSubmit(handleSaveQuiz)()}
               >
@@ -237,14 +259,14 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
                       type="button"
                       onClick={() => { setSelectedQuestionId(q.id); setCreatingNew(false); }}
                       className={cn(
-                        'w-full rounded-lg border px-3 py-2 text-left text-sm font-medium text-white transition-colors active:scale-95',
+                        'flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left min-h-12 overflow-hidden transition-colors active:scale-95',
                         selectedQuestionId === q.id && !creatingNew
                           ? 'border-brand bg-brand/20'
                           : 'border-quiz-border hover:bg-quiz-surface',
                       )}
                     >
-                      <span className="text-quiz-text-muted">{idx + 1}.</span>{' '}
-                      <span className="truncate">{q.text.slice(0, 30) || '(sem texto)'}</span>
+                      <span className="shrink-0 text-label-xs font-bold text-quiz-text-muted">{idx + 1}</span>
+                      <span className="line-clamp-2 text-body-sm font-medium text-white">{q.text || '(sem texto)'}</span>
                     </button>
                   ))}
                   <button
@@ -263,6 +285,20 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
                       <h4 className="font-bold text-sm text-white">Nova pergunta</h4>
                       <textarea className={inputCls} placeholder="Texto da pergunta *" rows={2} {...newQForm.register('text')} />
                       {newQForm.formState.errors.text && <p className="text-sm font-bold text-option-a">{newQForm.formState.errors.text.message}</p>}
+                      <ImageDropzone
+                        value={newQImageUrl}
+                        onFileSelected={(file) => {
+                          setNewQUploading(true);
+                          setNewQUploadProgress(0);
+                          void uploadToImageKit(file, token, setNewQUploadProgress, '/question')
+                            .then((url) => { setNewQImageUrl(url); })
+                            .catch((err) => { console.error(err); })
+                            .finally(() => { setNewQUploading(false); setNewQUploadProgress(null); });
+                        }}
+                        uploading={newQUploading}
+                        uploadProgress={newQUploadProgress}
+                        onRemove={() => setNewQImageUrl(null)}
+                      />
                       {([0, 1, 2, 3] as const).map((i) => (
                         <div key={i} className="flex items-center gap-2">
                           <input type="radio" name="new-correct" checked={newQForm.watch('correctIndex') === i} onChange={() => newQForm.setValue('correctIndex', i)} className="accent-brand" aria-label={`Alt ${i + 1} correta`} />
@@ -280,7 +316,7 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
                         </label>
                       </div>
                       {newQForm.formState.errors.timeLimitSec && <p className="text-sm font-bold text-option-a">{newQForm.formState.errors.timeLimitSec.message}</p>}
-                      <button type="button" className={cn(btnCls, 'self-start')} onClick={() => void newQForm.handleSubmit(addQuestion)()}>
+                      <button type="button" className={cn(btnCls, 'self-start')} disabled={newQUploading} onClick={() => void newQForm.handleSubmit(addQuestion)()}>
                         + Adicionar pergunta
                       </button>
                     </div>
@@ -291,6 +327,7 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
                       index={questions.indexOf(selectedQuestion)}
                       question={selectedQuestion}
                       inputCls={inputCls}
+                      token={token}
                       onChange={(field, value) => updateQuestionField(selectedQuestion.id, field, value)}
                       onSave={() => void saveQuestion(selectedQuestion)}
                       onDelete={() => void deleteQuestion(selectedQuestion.id)}

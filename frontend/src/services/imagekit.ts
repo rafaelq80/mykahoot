@@ -40,6 +40,7 @@ export async function uploadToImageKit(
   file: File,
   token: string,
   onProgress?: (percent: number) => void,
+  folder?: string,
 ): Promise<string> {
   // 1. Validação client-side
   const validationError = validateImageFile(file);
@@ -69,6 +70,7 @@ export async function uploadToImageKit(
   const fd = new FormData();
   fd.append('file', file);
   fd.append('fileName', file.name);
+  fd.append('folder', folder ?? '/quiz');
   fd.append('publicKey', IK_PUBLIC_KEY);
   fd.append('signature', auth.signature);
   fd.append('expire', String(auth.expire));
@@ -104,7 +106,7 @@ export async function uploadToImageKit(
       reject(new Error('Upload cancelado.'));
     });
 
-    xhr.open('POST', `${IK_ENDPOINT}/api/v1/files/upload`);
+    xhr.open('POST', 'https://upload.imagekit.io/api/v1/files/upload');
     xhr.send(fd);
   });
 }

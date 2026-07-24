@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
+import { uploadToImageKit } from '../../services/imagekit';
+import { ImageDropzone } from '../../shared/components/ImageDropzone';
 import type { Question } from '../../types/quiz';
 
 interface QuestionEditorProps {
   index: number;
   question: Question;
   inputCls: string;
+  token: string;
   onChange: <K extends keyof Question>(field: K, value: Question[K]) => void;
   onSave: () => void;
   onDelete: () => void;
@@ -14,10 +18,28 @@ export function QuestionEditor({
   index,
   question,
   inputCls,
+  token,
   onChange,
   onSave,
   onDelete,
 }: QuestionEditorProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  const handleFileSelected = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const url = await uploadToImageKit(file, token, setUploadProgress, '/question');
+      onChange('imageUrl', url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
   return (
     <div className="card-glass flex flex-col gap-2 rounded-xl border border-quiz-border p-4">
       <div className="flex items-center justify-between">
@@ -33,6 +55,13 @@ export function QuestionEditor({
         </button>
       </div>
       <textarea className={inputCls} rows={2} value={question.text} onChange={(e) => onChange('text', e.target.value)} />
+      <ImageDropzone
+        value={question.imageUrl}
+        onFileSelected={(file) => void handleFileSelected(file)}
+        uploading={uploading}
+        uploadProgress={uploadProgress}
+        onRemove={() => onChange('imageUrl', null)}
+      />
       {question.options.map((opt, i) => (
         <div key={i} className="flex items-center gap-2">
           <input
