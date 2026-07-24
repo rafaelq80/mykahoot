@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
 const ICONS = ['▲', '◆', '●', '■'] as const;
@@ -15,7 +16,6 @@ interface AdminOptionCardProps {
   text: string;
   mode: AdminOptionMode;
   isCorrect?: boolean;
-  voteCount?: number;
 }
 
 /** Cartão de alternativa — mesma aparência do OptionButton do jogador, porém não clicável. */
@@ -24,7 +24,6 @@ export function AdminOptionCard({
   text,
   mode,
   isCorrect = false,
-  voteCount = 0,
 }: AdminOptionCardProps) {
   return (
     <div
@@ -33,22 +32,16 @@ export function AdminOptionCard({
         'text-left font-bold text-base text-white shadow-md sm:text-lg',
         'whitespace-normal break-words',
         BG_CLASSES[index],
-        mode === 'result' && isCorrect && 'ring-4 ring-white ring-offset-2',
-        mode === 'result' && !isCorrect && 'opacity-85',
+        mode === 'result' && !isCorrect && 'opacity-75 shadow-inner',
       )}
     >
       <span className="text-2xl shrink-0 leading-none sm:text-3xl" aria-hidden="true">
-        {mode === 'result' && isCorrect ? '✓' : ICONS[index]}
+        {ICONS[index]}
       </span>
       <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{text}</span>
       {mode === 'result' && (
-        <span
-          className={cn(
-            'shrink-0 rounded-full px-3 py-1 text-sm font-black tabular-nums',
-            isCorrect ? 'bg-white text-brand' : 'bg-quiz-surface-strong text-white',
-          )}
-        >
-          {voteCount}
+        <span className="shrink-0 text-xl font-black">
+          {isCorrect ? '✓' : '✕'}
         </span>
       )}
     </div>
@@ -77,6 +70,8 @@ export function AdminQuestionDisplay({
   correctIndex = null,
   voteCounts = [0, 0, 0, 0],
 }: AdminQuestionDisplayProps) {
+  const [showChart, setShowChart] = useState(true);
+
   return (
     <div className="flex h-full w-full max-w-5xl min-h-0 flex-1 flex-col gap-3 sm:gap-4">
       {/* Texto da pergunta — card branco, altura fixa, igual ao jogador */}
@@ -86,9 +81,11 @@ export function AdminQuestionDisplay({
         </h2>
       </div>
 
-      {/* Imagem — ocupa o espaço vertical restante, mesmo sem imagem própria */}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        {imageUrl ? (
+      {/* Image or Bar Chart */}
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
+        {mode === 'result' && showChart ? (
+          <BarChart voteCounts={voteCounts} correctIndex={correctIndex} />
+        ) : imageUrl ? (
           <img
             src={imageUrl}
             alt="Imagem da pergunta"
@@ -96,6 +93,15 @@ export function AdminQuestionDisplay({
           />
         ) : (
           <DefaultQuestionImage />
+        )}
+        {mode === 'result' && (
+          <button
+            type="button"
+            onClick={() => setShowChart(!showChart)}
+            className="rounded-lg bg-quiz-surface-strong px-4 py-1.5 text-xs font-bold text-white/80 transition-colors hover:bg-quiz-surface hover:text-white"
+          >
+            {showChart ? 'Mostrar imagem' : 'Mostrar gráfico'}
+          </button>
         )}
       </div>
 
@@ -112,10 +118,34 @@ export function AdminQuestionDisplay({
             text={opt}
             mode={mode}
             isCorrect={mode === 'result' && correctIndex === idx}
-            voteCount={voteCounts[idx] ?? 0}
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function BarChart({ voteCounts, correctIndex }: { voteCounts: number[]; correctIndex: number | null }) {
+  const max = Math.max(...voteCounts, 1);
+  const BG = ['bg-option-a', 'bg-option-b', 'bg-option-c', 'bg-option-d'] as const;
+  const CHART_ICONS = ['▲', '◆', '●', '■'] as const;
+
+  return (
+    <div className="flex w-full max-w-md items-end justify-center gap-4 h-48 px-4">
+      {voteCounts.map((count, idx) => (
+        <div key={idx} className="flex flex-1 flex-col items-center gap-2">
+          <span className="text-sm font-black tabular-nums text-white">{count}</span>
+          <div
+            className={cn(
+              'w-full rounded-t-lg transition-all duration-500',
+              BG[idx],
+              correctIndex === idx ? 'ring-2 ring-white' : '',
+            )}
+            style={{ height: `${(count / max) * 100}%`, minHeight: count > 0 ? '8px' : '2px' }}
+          />
+          <span className="text-lg" aria-hidden="true">{CHART_ICONS[idx]}</span>
+        </div>
+      ))}
     </div>
   );
 }

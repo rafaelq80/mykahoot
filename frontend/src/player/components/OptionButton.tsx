@@ -45,8 +45,7 @@ export function OptionButton({
         variant === 'idle' && 'hover:opacity-90',
         variant === 'dimmed' && 'opacity-40 cursor-not-allowed',
         variant === 'selected' && 'ring-4 ring-white ring-offset-2',
-        isCorrect && 'ring-4 ring-white ring-offset-2',
-        isWrong && 'ring-4 ring-white ring-offset-2 animate-[shake_0.4s_ease] motion-reduce:animate-none',
+        isWrong && 'shadow-[inset_0_0_0_3px_rgba(0,0,0,0.2)] opacity-75',
         disabled && 'cursor-not-allowed',
       )}
       disabled={disabled}
@@ -55,7 +54,7 @@ export function OptionButton({
       onClick={onClick}
     >
       <span className="text-2xl shrink-0 leading-none sm:text-3xl" aria-hidden="true">
-        {isCorrect ? '✓' : ICONS[index]}
+        {isWrong ? '✕' : ICONS[index]}
       </span>
       <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{text}</span>
     </button>

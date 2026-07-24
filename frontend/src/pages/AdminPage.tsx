@@ -8,7 +8,7 @@ import { AdminTurmasPage } from '../admin/pages/TurmasPage';
 import { AdminHistoricoPage } from '../admin/pages/HistoricoPage';
 import { AdminHeader } from '../admin/components/AdminHeader';
 import { AdminFooter } from '../admin/components/AdminFooter';
-import type { GameControlFooterState } from '../admin/components/AdminFooter';
+import type { GameControlFooterState, GameOverFooterState } from '../admin/components/AdminFooter';
 import { useAdminSocket } from '../admin/hooks/useAdminSocket';
 import { useBackgroundMusic } from '../shared/hooks/useBackgroundMusic';
 import { useAdminStore } from '../admin/store/useAdminStore';
@@ -48,7 +48,9 @@ export function AdminPage() {
   // AdminDashboardPage — usado pro rodapé global (Aguardando respostas /
   // Próxima pergunta / Encerrar jogo) e pro cabeçalho simplificado.
   const [gameControl, setGameControl] = useState<GameControlFooterState | null>(null);
+  const [gameOver, setGameOver] = useState<GameOverFooterState | null>(null);
   const adminScreen = useAdminStore((s) => s.screen);
+  const adminTimer = useAdminStore((s) => s.timer);
   const musicEnabledByAdmin = useAdminStore((s) => s.musicEnabledByAdmin);
 
   useAdminSocket(token);
@@ -117,7 +119,13 @@ export function AdminPage() {
 
   return (
     <div className="flex h-dvh flex-col bg-brand">
-      <AdminHeader navLinks={navLinks} onLogout={handleLogout} simplified={gameControl != null} />
+      <AdminHeader
+        navLinks={navLinks}
+        onLogout={handleLogout}
+        simplified={gameControl != null}
+        timer={adminScreen === 'question_active' ? adminTimer : null}
+        questionLabel={gameControl ? `Pergunta ${gameControl.currentQuestion}/${gameControl.totalQuestions}` : null}
+      />
 
       <div className="flex flex-1 min-h-0 flex-col overflow-auto">
         <Routes>
@@ -131,6 +139,7 @@ export function AdminPage() {
                 onQuizzesCountChange={setQuizzesCount}
                 onWaitingRoomStateChange={setWaitingRoom}
                 onGameControlStateChange={setGameControl}
+                onGameOverStateChange={setGameOver}
               />
             }
           />
@@ -146,6 +155,7 @@ export function AdminPage() {
         waitingRoom={waitingRoom}
         quizzesCount={quizzesCount}
         gameControl={gameControl}
+        gameOver={gameOver}
       />
     </div>
   );

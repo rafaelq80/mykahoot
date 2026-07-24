@@ -31,7 +31,7 @@ export function TimerDisplay({ seconds }: TimerDisplayProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-full px-4 py-1.5 font-extrabold text-quiz-highlight-foreground shadow-sm',
+        'flex items-center self-center gap-2 rounded-full px-4 py-1.5 font-extrabold text-quiz-highlight-foreground shadow-sm',
         isUrgent ? 'animate-timer-warning' : 'bg-quiz-highlight',
       )}
       aria-live="polite"

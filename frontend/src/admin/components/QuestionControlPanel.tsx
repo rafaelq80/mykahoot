@@ -1,5 +1,4 @@
 import { useAdminStore } from '../store/useAdminStore';
-import { TimerDisplay } from '../../player/components/TimerDisplay';
 import {
   AdminQuestionDisplay,
   computeVoteCounts,
@@ -31,7 +30,6 @@ export function QuestionControlPanel({ questions }: Props) {
   const correctIndex = useAdminStore((s) => s.correctIndex);
   const ranking = useAdminStore((s) => s.ranking);
   const errorMessage = useAdminStore((s) => s.errorMessage);
-  const timer = useAdminStore((s) => s.timer);
 
   const currentQ = questions[currentQuestionIndex] ?? null;
   const voteCounts = computeVoteCounts(ranking);
@@ -40,13 +38,6 @@ export function QuestionControlPanel({ questions }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col items-center gap-2 overflow-hidden px-4 py-3 sm:px-6">
-      {/* Contador de tempo — canto superior direito, igual ao do jogador */}
-      {screen === 'question_active' && (
-        <div className="flex w-full max-w-5xl shrink-0 justify-end">
-          <TimerDisplay seconds={timer} />
-        </div>
-      )}
-
       {errorMessage && (
         <div role="alert" className="w-full max-w-5xl shrink-0 rounded-xl bg-option-a px-4 py-3 text-sm font-bold text-white">
           {errorMessage}
