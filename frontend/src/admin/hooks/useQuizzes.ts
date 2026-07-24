@@ -1,13 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch, ApiError } from '../../services/api';
-
-export interface Quiz {
-  id: string;
-  title: string;
-  themeId: string;
-  theme: { name: string };
-  _count: { questions: number };
-}
+import type { Quiz } from '../../types/quiz';
+export type { Quiz };
 
 export function useQuizzes(token: string) {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);

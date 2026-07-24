@@ -1,24 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch, ApiError } from '../../services/api';
-
-export interface Question {
-  id: string;
-  text: string;
-  imageUrl: string | null;
-  options: string[];
-  correctIndex: number;
-  timeLimitSec: number;
-  order: number;
-}
-
-export interface CreateQuestionPayload {
-  text: string;
-  options: string[];
-  correctIndex: number;
-  timeLimitSec: number;
-  order: number;
-  imageUrl: string | null;
-}
+import type { Question, CreateQuestionPayload } from '../../types/quiz';
+export type { Question, CreateQuestionPayload };
 
 export function useQuestions(token: string, quizId: string | null) {
   const [questions, setQuestions] = useState<Question[]>([]);

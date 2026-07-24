@@ -3,15 +3,7 @@ import {
   AdminQuestionDisplay,
   computeVoteCounts,
 } from './AdminQuestionDisplay';
-
-interface Question {
-  id: string;
-  text: string;
-  imageUrl: string | null;
-  options: string[];
-  timeLimitSec: number;
-  order: number;
-}
+import type { Question } from '../../types/quiz';
 
 interface Props {
   questions: Question[];

@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../../lib/utils';
 import { AdminScreenLayout } from './AdminScreenLayout';
-
-interface Quiz {
-  id: string;
-  title: string;
-  theme: { name: string };
-  _count: { questions: number };
-  imageUrl?: string | null;
-}
+import type { Quiz } from '../../types/quiz';
 
 interface Props {
   quizzes: Quiz[];

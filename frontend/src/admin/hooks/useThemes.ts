@@ -1,11 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch, ApiError } from '../../services/api';
-
-export interface Theme {
-  id: string;
-  name: string;
-  description?: string;
-}
+import type { Theme } from '../../types/quiz';
+export type { Theme };
 
 export function useThemes(token: string) {
   const [themes, setThemes] = useState<Theme[]>([]);

@@ -7,26 +7,7 @@ import { apiFetch, ApiError } from '../../services/api';
 import { questionSchema } from '../../schemas/question.schema';
 import type { QuestionFormData } from '../../schemas/question.schema';
 import { AdminScreenLayout } from '../components/AdminScreenLayout';
-
-interface Theme {
-  id: string;
-  name: string;
-}
-interface QuizDetail {
-  id: string;
-  title: string;
-  themeId: string;
-  imageUrl: string | null;
-}
-interface Question {
-  id: string;
-  text: string;
-  imageUrl: string | null;
-  options: string[];
-  correctIndex: number;
-  timeLimitSec: number;
-  order: number;
-}
+import type { Theme, QuizDetail, Question } from '../../types/quiz';
 
 interface Props {
   quizId: string;
@@ -124,6 +105,19 @@ export function EditQuizPage({ quizId, token, onClose, onSaved }: Props) {
   };
 
   const saveQuestion = async (q: Question) => {
+    const parsed = questionSchema.safeParse({
+      text: q.text,
+      options: q.options,
+      correctIndex: q.correctIndex,
+      timeLimitSec: q.timeLimitSec,
+      order: q.order,
+      imageUrl: q.imageUrl || '',
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.issues.map((i) => i.message).join('; ');
+      showFeedback(msg);
+      return;
+    }
     try {
       await apiFetch(`/quizzes/${quizId}/questions/${q.id}`, {
         method: 'PATCH',
