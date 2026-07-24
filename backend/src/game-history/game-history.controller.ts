@@ -23,7 +23,7 @@ export class GameHistoryController {
         playedAt: true,
         quizId: true,
         quiz: { title: true, theme: { name: true } },
-        results: { id: true, nickname: true, avatar: true, score: true },
+        results: { id: true, nickname: true, avatar: true, score: true, correctCount: true, wrongCount: true, classificacao: true, alunoId: true, turmaId: true },
       },
     });
   }

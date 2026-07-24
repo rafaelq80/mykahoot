@@ -3,7 +3,7 @@ import { QuestionView } from '../components/QuestionView';
 import { ProgressBar } from '../components/ProgressBar';
 import { TimerDisplay } from '../components/TimerDisplay';
 import { useCountdown } from '../../shared/hooks/useCountdown';
-import { AvatarBadge } from '../components/AvatarBadge';
+import { AvatarBadge } from '../../shared/components/AvatarBadge';
 import { ScorePill } from '../components/ScorePill';
 import { TopNavBar } from '../components/TopNavBar';
 

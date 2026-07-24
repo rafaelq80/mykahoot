@@ -21,7 +21,7 @@ async function bootstrap() {
 
   if (enableSwagger) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('QuizLive API')
+      .setTitle('MyKahoot API')
       .setDescription('API REST + WebSocket para quiz multiplayer em tempo real (estilo Kahoot)')
       .setVersion('1.0')
       .addBearerAuth()

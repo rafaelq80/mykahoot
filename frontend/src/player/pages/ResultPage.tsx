@@ -3,7 +3,7 @@ import { useGameStore } from '../store/useGameStore';
 import { playSting } from '../../shared/hooks/useBackgroundMusic';
 import { QuestionResultView } from '../components/QuestionResultView';
 import { ProgressBar } from '../components/ProgressBar';
-import { AvatarBadge } from '../components/AvatarBadge';
+import { AvatarBadge } from '../../shared/components/AvatarBadge';
 import { ScorePill } from '../components/ScorePill';
 import { TopNavBar } from '../components/TopNavBar';
 

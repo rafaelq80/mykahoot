@@ -1,67 +1,72 @@
-import { useEffect, useState, useCallback } from 'react';
-import { cn } from '../../lib/utils';
-import type { Turma } from '../../types/turma';
-import { apiFetch, ApiError } from '../../services/api';
+import { useState } from 'react';
 import { AdminScreenLayout } from '../components/AdminScreenLayout';
+import { TurmaForm } from '../components/TurmaForm';
+import { AlunosPage } from './AlunosPage';
+import { Pagination } from '../../shared/components/Pagination';
+import { useTurmas } from '../hooks/useTurmas';
+import type { TurmaFormData } from '../../schemas/turma.schema';
+import type { Turma } from '../../types/turma';
 
-export function AdminTurmasPage({ token }: { token: string }) {
+const PAGE_SIZE = 10;
 
-  const [turmas, setTurmas] = useState<Turma[]>([]);
-  const [selectedTurmaId, setSelectedTurmaId] = useState<string | null>(null);
+const deleteBtnCls = 'rounded-lg bg-option-a px-2 py-1 text-xs font-bold text-white active:scale-95 transition-all shrink-0';
+
+interface Props {
+  token: string;
+}
+
+export function AdminTurmasPage({ token }: Props) {
+  const { turmas, createTurma, updateTurma, deleteTurma } = useTurmas(token);
   const [feedback, setFeedback] = useState<string | null>(null);
-
-  const [turmaNome, setTurmaNome] = useState('');
-  const [alunoNome, setAlunoNome] = useState('');
+  const [editingTurma, setEditingTurma] = useState<Turma | null>(null);
+  const [managingTurmaId, setManagingTurmaId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const showFeedback = (msg: string) => { setFeedback(msg); setTimeout(() => setFeedback(null), 3000); };
 
-  const loadTurmas = useCallback(async () => {
-    try {
-      const d = await apiFetch<Turma[]>('/turmas', { token });
-      setTurmas(d);
-    } catch (err) {
-      console.error(err);
-      setTurmas([]);
+  const managingTurma = turmas.find((t) => t.id === managingTurmaId) ?? null;
+
+  if (managingTurmaId) {
+    return (
+      <AlunosPage
+        token={token}
+        turmaId={managingTurmaId}
+        turmaNome={managingTurma?.nome}
+        onBack={() => setManagingTurmaId(null)}
+      />
+    );
+  }
+
+  const totalPages = Math.max(1, Math.ceil(turmas.length / PAGE_SIZE));
+  const pageTurmas = turmas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const handleSubmit = async (data: TurmaFormData) => {
+    if (editingTurma) {
+      const err = await updateTurma(editingTurma.id, data);
+      if (err) { showFeedback(err); return; }
+      setEditingTurma(null);
+      showFeedback('Turma atualizada!');
+    } else {
+      const err = await createTurma(data);
+      if (err) { showFeedback(err); return; }
+      showFeedback('Turma criada!');
     }
-  }, [token]);
-
-  useEffect(() => { void loadTurmas(); }, []);
-
-  const selectedTurma = turmas.find((t) => t.id === selectedTurmaId) ?? null;
-
-  const createTurma = async () => {
-    if (!turmaNome.trim()) return;
-    try {
-      await apiFetch('/turmas', { method: 'POST', token, body: { nome: turmaNome } });
-    } catch (err) { showFeedback(err instanceof ApiError ? err.message : 'Erro ao criar turma.'); return; }
-    setTurmaNome(''); await loadTurmas(); showFeedback('Turma criada!');
   };
-  const deleteTurma = async (id: string) => {
+
+  const handleDelete = async (id: string) => {
     if (!confirm('Deletar turma? Todos os alunos dela também serão removidos.')) return;
-    try {
-      await apiFetch(`/turmas/${id}`, { method: 'DELETE', token });
-    } catch (err) { showFeedback(err instanceof ApiError ? err.message : 'Erro ao deletar turma.'); return; }
-    if (selectedTurmaId === id) setSelectedTurmaId(null);
-    await loadTurmas(); showFeedback('Turma removida.');
-  };
-  const createAluno = async () => {
-    if (!selectedTurmaId || !alunoNome.trim()) return;
-    try {
-      await apiFetch(`/turmas/${selectedTurmaId}/alunos`, { method: 'POST', token, body: { nome: alunoNome } });
-    } catch (err) { showFeedback(err instanceof ApiError ? err.message : 'Erro ao adicionar aluno.'); return; }
-    setAlunoNome(''); await loadTurmas(); showFeedback('Aluno adicionado!');
-  };
-  const deleteAluno = async (alunoId: string) => {
-    if (!selectedTurmaId || !confirm('Remover aluno?')) return;
-    try {
-      await apiFetch(`/turmas/${selectedTurmaId}/alunos/${alunoId}`, { method: 'DELETE', token });
-    } catch (err) { showFeedback(err instanceof ApiError ? err.message : 'Erro ao remover aluno.'); return; }
-    await loadTurmas(); showFeedback('Aluno removido.');
+    const err = await deleteTurma(id);
+    if (err) { showFeedback(err); return; }
+    showFeedback('Turma removida.');
   };
 
-  const inputCls = 'w-full rounded-lg border border-quiz-border bg-quiz-surface px-3 py-2 text-sm font-medium text-white placeholder:text-quiz-text-muted focus:border-quiz-highlight focus:outline-none';
-  const btnCls = 'rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed';
-  const deleteBtnCls = 'rounded-lg bg-option-a px-2 py-1 text-xs font-bold text-white active:scale-95 transition-all shrink-0';
+  const handleEdit = (turma: Turma) => {
+    setEditingTurma(turma);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTurma(null);
+  };
 
   return (
     <AdminScreenLayout title="Turmas" subtitle="Gerencie turmas e alunos">
@@ -71,51 +76,66 @@ export function AdminTurmasPage({ token }: { token: string }) {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col px-5 py-6 sm:px-8">
-        {/* Painel vidro sobre o gradiente do admin — mesmo padrão do resto do painel do professor */}
-        <div className="card-glass-strong flex flex-col overflow-hidden divide-y divide-quiz-border lg:flex-row lg:divide-y-0 lg:divide-x">
-        {/* Turmas */}
-        <section className="flex flex-col gap-3 p-5 lg:w-80">
-          <h2 className="font-black text-base text-white">Turmas</h2>
-          <input className={inputCls} placeholder="Nome da turma *" value={turmaNome} onChange={(e) => setTurmaNome(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void createTurma()} />
-          <button type="button" className={btnCls} onClick={() => void createTurma()}>+ Criar turma</button>
-          <ul className="flex flex-col gap-2 mt-2">
-            {turmas.map((t) => (
-              <li key={t.id}
-                className={cn('flex items-center justify-between rounded-lg border p-3 text-sm text-white cursor-pointer transition-colors', selectedTurmaId === t.id ? 'border-brand bg-brand/20' : 'border-quiz-border hover:bg-quiz-surface')}
-                onClick={() => setSelectedTurmaId(t.id)}>
-                <div><strong>{t.nome}</strong><span className="ml-1 text-quiz-text-muted">({t.alunos.length} aluno{t.alunos.length === 1 ? '' : 's'})</span></div>
-                <button type="button" className={deleteBtnCls} onClick={(e) => { e.stopPropagation(); void deleteTurma(t.id); }}>✕</button>
-              </li>
-            ))}
-            {turmas.length === 0 && (
-              <li className="text-sm text-quiz-text-muted italic px-1">Nenhuma turma cadastrada ainda.</li>
-            )}
-          </ul>
+      <div className="flex flex-1 flex-col gap-5 px-5 py-6 sm:px-8">
+        {/* Form */}
+        <section className="card-glass-strong p-5">
+          <h2 className="mb-3 font-black text-base text-white">
+            {editingTurma ? 'Editar Turma' : 'Nova Turma'}
+          </h2>
+          <TurmaForm
+            mode={editingTurma ? 'edit' : 'create'}
+            initialValue={editingTurma ? { nome: editingTurma.nome } : undefined}
+            onSubmit={(data) => void handleSubmit(data)}
+            onCancelEdit={handleCancelEdit}
+          />
         </section>
 
-        {/* Alunos */}
-        {selectedTurma && (
-          <section className="flex flex-col gap-3 p-5 flex-1">
-            <h2 className="font-black text-base text-white">Alunos — {selectedTurma.nome}</h2>
-            <div className="flex gap-2">
-              <input className={inputCls} placeholder="Nome do aluno *" value={alunoNome} onChange={(e) => setAlunoNome(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void createAluno()} />
-              <button type="button" className={cn(btnCls, 'shrink-0')} disabled={!alunoNome.trim()} onClick={() => void createAluno()}>+ Adicionar</button>
-            </div>
-            <ul className="flex flex-col gap-2 mt-2">
-              {selectedTurma.alunos.map((a, idx) => (
-                <li key={a.id} className="flex items-center justify-between rounded-lg border border-quiz-border p-3 text-sm text-white">
-                  <div><span className="text-quiz-text-muted">{idx + 1}. </span><strong>{a.nome}</strong></div>
-                  <button type="button" className={deleteBtnCls} onClick={() => void deleteAluno(a.id)}>✕</button>
-                </li>
-              ))}
-              {selectedTurma.alunos.length === 0 && (
-                <li className="text-sm text-quiz-text-muted italic px-1">Nenhum aluno cadastrado nesta turma ainda.</li>
+        {/* Lista */}
+        <section className="card-glass-strong flex flex-col gap-3 p-5">
+          <h2 className="font-black text-base text-white">Turmas ({turmas.length})</h2>
+          {turmas.length === 0 ? (
+            <p className="text-sm text-quiz-text-muted">Nenhuma turma cadastrada.</p>
+          ) : (
+            <>
+              <ul className="flex flex-col gap-2">
+                {pageTurmas.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between rounded-lg border border-quiz-border p-3 text-sm text-white">
+                    <div>
+                      <strong>{t.nome}</strong>
+                      <span className="ml-2 text-quiz-text-muted">({t.alunos.length} aluno{t.alunos.length === 1 ? '' : 's'})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setManagingTurmaId(t.id)}
+                        className="rounded-lg border border-quiz-border px-2 py-1 text-xs font-bold text-white transition-colors hover:bg-quiz-surface active:scale-95"
+                      >
+                        Alunos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(t)}
+                        className="rounded-lg border border-quiz-border px-2 py-1 text-xs font-bold text-white transition-colors hover:bg-quiz-surface active:scale-95"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className={deleteBtnCls}
+                        onClick={() => void handleDelete(t.id)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {totalPages > 1 && (
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
               )}
-            </ul>
-          </section>
-        )}
-        </div>
+            </>
+          )}
+        </section>
       </div>
     </AdminScreenLayout>
   );

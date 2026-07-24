@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/useAdminStore';
 import { cn } from '../../lib/utils';
+import { Pagination } from '../../shared/components/Pagination';
 import { AdminScreenLayout } from './AdminScreenLayout';
 import type { Quiz } from '../../types/quiz';
 
@@ -35,58 +36,6 @@ function PlayIcon() {
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true">
       <path d="M5 3.5v13l11-6.5-11-6.5Z" />
     </svg>
-  );
-}
-
-function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
-      <path
-        d={direction === 'left' ? 'M12.5 4.5 7 10l5.5 5.5' : 'M7.5 4.5 13 10l-5.5 5.5'}
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  onPrev,
-  onNext,
-}: {
-  page: number;
-  totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
-  return (
-    <div className="flex shrink-0 items-center justify-center gap-3">
-      <button
-        type="button"
-        onClick={onPrev}
-        disabled={page === 0}
-        aria-label="Página anterior"
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition-all enabled:hover:border-brand enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 motion-reduce:transition-none"
-      >
-        <ChevronIcon direction="left" />
-      </button>
-      <span className="text-sm font-bold tabular-nums text-white/60">
-        Página {page + 1} de {totalPages}
-      </span>
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={page === totalPages - 1}
-        aria-label="Próxima página"
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition-all enabled:hover:border-brand enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 active:scale-95 motion-reduce:transition-none"
-      >
-        <ChevronIcon direction="right" />
-      </button>
-    </div>
   );
 }
 
@@ -205,8 +154,7 @@ export function WaitingRoomPanel({
             <Pagination
               page={quizPage}
               totalPages={totalQuizPages}
-              onPrev={() => setQuizPage((p) => Math.max(0, p - 1))}
-              onNext={() => setQuizPage((p) => Math.min(totalQuizPages - 1, p + 1))}
+              onPageChange={setQuizPage}
             />
           )}
         </div>
@@ -253,8 +201,7 @@ export function WaitingRoomPanel({
           <Pagination
             page={playerPage}
             totalPages={totalPlayerPages}
-            onPrev={() => setPlayerPage((p) => Math.max(0, p - 1))}
-            onNext={() => setPlayerPage((p) => Math.min(totalPlayerPages - 1, p + 1))}
+            onPageChange={setPlayerPage}
           />
         )}
       </div>

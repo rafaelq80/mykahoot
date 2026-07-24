@@ -6,7 +6,7 @@ import type { WaitingRoomFooterState } from '../admin/pages/DashboardPage';
 import { QuizListPage } from '../admin/pages/QuizListPage';
 import { CategoriesPage } from '../admin/pages/CategoriesPage';
 import { AdminTurmasPage } from '../admin/pages/TurmasPage';
-import { AdminHistoricoPage } from '../admin/pages/HistoricoPage';
+import { AdminResultadosPage } from '../admin/pages/ResultadosPage';
 import { AdminHeader } from '../admin/components/AdminHeader';
 import { AdminFooter } from '../admin/components/AdminFooter';
 import type { GameControlFooterState, GameOverFooterState } from '../admin/components/AdminFooter';
@@ -116,7 +116,7 @@ export function AdminPage() {
     { to: '/admin/quizzes', label: 'Quizzes' },
     { to: '/admin/categorias', label: 'Categorias' },
     { to: '/admin/turmas', label: 'Turmas' },
-    { to: '/admin/historico', label: 'Histórico' },
+    { to: '/admin/resultados', label: 'Resultados' },
   ];
 
   return (
@@ -148,7 +148,7 @@ export function AdminPage() {
           <Route path="quizzes" element={<QuizListPage token={token} />} />
           <Route path="categorias" element={<CategoriesPage token={token} />} />
           <Route path="turmas" element={<AdminTurmasPage token={token} />} />
-          <Route path="historico" element={<AdminHistoricoPage token={token} />} />
+          <Route path="resultados" element={<AdminResultadosPage token={token} />} />
           <Route path="*" element={<Navigate to="/admin/partida" replace />} />
         </Routes>
       </div>

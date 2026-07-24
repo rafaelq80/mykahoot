@@ -9,7 +9,7 @@ import type {
 // ─── Last Join Info (sessionStorage) ─────────────────────────────────────────
 // Cleared when the game resets (sala encerrada) to force fresh entry next time.
 
-const LAST_JOIN_KEY = 'quizlive_last_join';
+const LAST_JOIN_KEY = 'MyKahoot_last_join';
 
 export function clearLastJoinInfo(): void {
   try {

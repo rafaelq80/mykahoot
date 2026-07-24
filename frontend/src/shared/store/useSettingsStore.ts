@@ -17,6 +17,6 @@ export const useSettingsStore = create<SettingsState>()(
       toggleLocalMute: () => set({ localMuted: !get().localMuted }),
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
     }),
-    { name: 'quizlive-settings' },
+    { name: 'MyKahoot-settings' },
   ),
 );

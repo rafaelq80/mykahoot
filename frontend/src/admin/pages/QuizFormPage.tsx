@@ -86,7 +86,7 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
         if (valError) { showFeedback(valError); setSavingQuiz(false); return; }
         setUploadProgress(0);
         try {
-          imageUrl = await uploadToImageKit(quizImageFile, token, setUploadProgress, '/quiz');
+          imageUrl = await uploadToImageKit(quizImageFile, token, setUploadProgress, '/myquiz/quiz');
         } catch (uploadErr) {
           showFeedback(uploadErr instanceof Error ? uploadErr.message : 'Erro no upload.');
           setSavingQuiz(false); setUploadProgress(null); return;
@@ -290,7 +290,7 @@ export function QuizFormPage({ token, quizId, onClose, onCreated, onSaved }: Pro
                         onFileSelected={(file) => {
                           setNewQUploading(true);
                           setNewQUploadProgress(0);
-                          void uploadToImageKit(file, token, setNewQUploadProgress, '/question')
+                          void uploadToImageKit(file, token, setNewQUploadProgress, '/myquiz/question')
                             .then((url) => { setNewQImageUrl(url); })
                             .catch((err) => { console.error(err); })
                             .finally(() => { setNewQUploading(false); setNewQUploadProgress(null); });

@@ -217,6 +217,32 @@ export class GameService {
         score: p.score,
       }));
 
+    // Persist classification, correctCount and wrongCount
+    await Promise.allSettled(
+      [...state.players.values()].map(async (player) => {
+        try {
+          const classificacao = finalRanking.findIndex(
+            (r) => r.socketId === player.socketId,
+          ) + 1;
+          const correctCount = [...player.answers.values()].filter(
+            (a) => a.correct,
+          ).length;
+          const totalAnswered = player.answers.size;
+          const wrongCount = totalAnswered - correctCount;
+
+          await this.playerResultRepository.update(
+            { id: player.playerResultId },
+            { correctCount, wrongCount, classificacao },
+          );
+        } catch (dbErr) {
+          this.logger.error(
+            `Failed to persist classification for ${player.nickname}`,
+            dbErr,
+          );
+        }
+      }),
+    );
+
     if (state.gameSessionId) {
       try {
         await this.gameHistoryService.finalizarSessao(state.gameSessionId);

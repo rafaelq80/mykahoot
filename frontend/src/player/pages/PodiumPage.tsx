@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/useGameStore';
 import { PodiumView } from '../components/PodiumView';
-import { AvatarBadge } from '../components/AvatarBadge';
+import { AvatarBadge } from '../../shared/components/AvatarBadge';
 import { TopNavBar } from '../components/TopNavBar';
 
 export default function PodiumPage() {

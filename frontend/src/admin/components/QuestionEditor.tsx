@@ -30,7 +30,7 @@ export function QuestionEditor({
     setUploading(true);
     setUploadProgress(0);
     try {
-      const url = await uploadToImageKit(file, token, setUploadProgress, '/question');
+      const url = await uploadToImageKit(file, token, setUploadProgress, '/myquiz/question');
       onChange('imageUrl', url);
     } catch (err) {
       console.error(err);

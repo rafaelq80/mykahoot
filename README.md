@@ -1,4 +1,4 @@
-# QuizLive
+# MyKahoot
 
 Aplicação de quiz em tempo real estilo Kahoot, com controle pelo professor.
 

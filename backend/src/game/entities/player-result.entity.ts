@@ -60,6 +60,21 @@ export class PlayerResult {
   @IsArray()
   answers!: PlayerAnswerRecord[];
 
+  @Column({ type: 'int', default: 0 })
+  @IsInt()
+  @Min(0)
+  correctCount!: number;
+
+  @Column({ type: 'int', default: 0 })
+  @IsInt()
+  @Min(0)
+  wrongCount!: number;
+
+  @Column({ type: 'int', nullable: true })
+  @IsInt()
+  @IsOptional()
+  classificacao?: number | null;
+
   @Column({ type: 'uuid', nullable: true })
   @IsUUID()
   @IsOptional()

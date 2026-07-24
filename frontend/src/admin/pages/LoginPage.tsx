@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { cn } from '../../lib/utils';
 import { apiFetch, ApiError } from '../../services/api';
 import { adminLoginSchema } from '../../schemas/adminLogin.schema';
 import type { AdminLoginFormData } from '../../schemas/adminLogin.schema';
+import { TextField } from '../../shared/components/TextField';
+import { Button } from '../../shared/components/Button';
 
 interface Props {
   onLogin: (token: string, username: string) => void;
@@ -54,65 +55,35 @@ export function AdminLoginPage({ onLogin, sessionExpiredMessage }: Props) {
             >
               🎯
             </div>
-            <p className="font-black text-2xl text-white">QuizLive</p>
-            <p className="font-bold text-xs text-white/60 uppercase tracking-widest mt-0.5">Professor</p>
+            <p className="font-black text-headline-md text-white">MyKahoot</p>
+            <p className="font-bold text-label-xs text-white/60 uppercase tracking-widest mt-0.5">Professor</p>
           </div>
 
           {/* Card */}
           <form
             onSubmit={(e) => void handleSubmit(onSubmit)(e)}
-            className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col gap-5"
+            className="card-glass-strong rounded-2xl p-8 flex flex-col gap-5"
           >
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="admin-username"
-                className="text-xs font-black uppercase tracking-widest text-gray-500"
-              >
-                Usuário
-              </label>
-              <input
-                id="admin-username"
-                type="text"
-                {...register('username')}
-                placeholder="Digite o usuário..."
-                autoFocus
-                autoComplete="username"
-                className={cn(
-                  'w-full rounded-xl border-2 border-surface-container bg-surface-container',
-                  'px-4 py-3 font-medium text-base text-gray-800 placeholder:text-gray-300',
-                  'focus:border-brand focus:bg-white focus:outline-none',
-                  'focus-visible:ring-2 focus-visible:ring-brand transition-colors',
-                )}
-              />
-              {errors.username && (
-                <p className="text-sm font-bold text-option-a">{errors.username.message}</p>
-              )}
-            </div>
+            <TextField
+              id="admin-username"
+              label="Usuário"
+              type="text"
+              placeholder="Digite o usuário..."
+              autoFocus
+              autoComplete="username"
+              error={errors.username?.message}
+              {...register('username')}
+            />
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="admin-password"
-                className="text-xs font-black uppercase tracking-widest text-gray-500"
-              >
-                Senha de acesso
-              </label>
-              <input
-                id="admin-password"
-                type="password"
-                {...register('password')}
-                placeholder="Digite a senha..."
-                autoComplete="current-password"
-                className={cn(
-                  'w-full rounded-xl border-2 border-surface-container bg-surface-container',
-                  'px-4 py-3 font-medium text-base text-gray-800 placeholder:text-gray-300',
-                  'focus:border-brand focus:bg-white focus:outline-none',
-                  'focus-visible:ring-2 focus-visible:ring-brand transition-colors',
-                )}
-              />
-              {errors.password && (
-                <p className="text-sm font-bold text-option-a">{errors.password.message}</p>
-              )}
-            </div>
+            <TextField
+              id="admin-password"
+              label="Senha de acesso"
+              type="password"
+              placeholder="Digite a senha..."
+              autoComplete="current-password"
+              error={errors.password?.message}
+              {...register('password')}
+            />
 
             {sessionExpiredMessage && (
               <p className="text-sm font-bold text-option-a" role="alert">{sessionExpiredMessage}</p>
@@ -122,20 +93,14 @@ export function AdminLoginPage({ onLogin, sessionExpiredMessage }: Props) {
               <p className="text-sm font-bold text-option-a" role="alert">{error}</p>
             )}
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={!canSubmit}
-              className={cn(
-                'w-full rounded-xl py-4 font-black text-base tracking-wide',
-                'transition-all active:scale-95 motion-reduce:transition-none',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                canSubmit
-                  ? 'bg-brand text-white hover:opacity-90 shadow-md cursor-pointer'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed',
-              )}
+              className="w-full py-4 font-black text-body-md tracking-wide"
             >
               {loading ? 'Entrando...' : 'ENTRAR'}
-            </button>
+            </Button>
           </form>
         </div>
       </main>

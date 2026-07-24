@@ -70,7 +70,7 @@ export async function uploadToImageKit(
   const fd = new FormData();
   fd.append('file', file);
   fd.append('fileName', file.name);
-  fd.append('folder', folder ?? '/quiz');
+  fd.append('folder', folder ?? '/myquiz/quiz');
   fd.append('publicKey', IK_PUBLIC_KEY);
   fd.append('signature', auth.signature);
   fd.append('expire', String(auth.expire));
